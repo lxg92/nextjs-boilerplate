@@ -1,103 +1,185 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+type VoicesResponse = {
+  voices: Array<{ voice_id: string; name: string; category?: string }>;
+};
+
+const FIXED_TEXT =
+  "This is a text I want to read out and to make you understand what I am reading";
+
+export default function Page() {
+  const qc = useQueryClient();
+
+  const [file, setFile] = useState<File | null>(null);
+  const [voiceName, setVoiceName] = useState("My IVC");
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+
+  // 1) useQuery: fetch the current voices so we can pick the newly-created IVC
+  const { data: voicesData, isLoading: voicesLoading } = useQuery<VoicesResponse>({
+    queryKey: ["voices"],
+    queryFn: async () => {
+      const r = await fetch("/api/voices", { cache: "no-store" });
+      if (!r.ok) throw new Error("Failed to fetch voices");
+      return r.json();
+    },
+    staleTime: 0,
+  });
+
+  const voices = voicesData?.voices ?? [];
+  const selectedVoice = useMemo(
+    () => voices.find((v) => v.voice_id === selectedVoiceId) ?? null,
+    [voices, selectedVoiceId]
+  );
+
+  // 2) useMutation: create an Instant Voice Clone from the uploaded file
+  const createIvcmutation = useMutation({
+    mutationFn: async ({ file, name }: { file: File; name: string }) => {
+      const fd = new FormData();
+      fd.set("name", name);
+      fd.set("file", file, file.name);
+      const r = await fetch("/api/ivc", { method: "POST", body: fd });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json() as Promise<{ voice_id: string }>;
+    },
+    onSuccess: async (payload) => {
+      const newId = (payload as any).voice_id;
+      // 3) useQueryClient: refresh cached voices, then auto-select the new one
+      await qc.invalidateQueries({ queryKey: ["voices"] });
+      setSelectedVoiceId(newId);
+    },
+  });
+
+  // 4) useMutation: generate audio with TTS for the selected voice
+  const ttsMutation = useMutation({
+    mutationFn: async ({ voiceId, text }: { voiceId: string; text: string }) => {
+      const r = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voiceId, text }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      const blob = await r.blob();
+      return URL.createObjectURL(blob);
+    },
+    onSuccess: (url) => {
+      // assign output to an <audio> tag
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      setAudioUrl(url);
+    },
+  });
+
+  const canCreate = !!file && !createIvcmutation.isPending;
+  const canSpeak = !!selectedVoiceId && !ttsMutation.isPending;
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="mx-auto max-w-xl p-6 space-y-6">
+      <h1 className="text-2xl font-semibold">IVC → TTS demo</h1>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+      <section className="space-y-3 rounded-xl border p-4">
+        <h2 className="font-medium">1) Upload your voice sample</h2>
+        
+        <div className="space-y-3">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="hidden"
+              id="file-upload"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <label
+              htmlFor="file-upload"
+              className="cursor-pointer block"
+            >
+              <div className="text-gray-600 mb-2">
+                {file ? (
+                  <div>
+                    <p className="text-green-600 font-medium">✓ {file.name}</p>
+                    <p className="text-sm text-gray-500">Click to change file</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-lg">📁 Click to upload audio file</p>
+                    <p className="text-sm text-gray-500">Supports MP3, WAV, M4A, etc.</p>
+                  </div>
+                )}
+              </div>
+            </label>
+          </div>
+          
+          <input
+            className="border p-2 rounded w-full"
+            placeholder="Voice name"
+            value={voiceName}
+            onChange={(e) => setVoiceName(e.target.value)}
+          />
+          
+          <button
+            className="px-4 py-2 rounded bg-black text-white disabled:opacity-50 w-full"
+            disabled={!canCreate}
+            onClick={() => file && createIvcmutation.mutate({ file, name: voiceName })}
           >
-            Read our docs
-          </a>
+            {createIvcmutation.isPending ? "Cloning…" : "Create Instant Voice Clone"}
+          </button>
+          
+          {createIvcmutation.isError && (
+            <p className="text-red-600 text-sm">
+              {(createIvcmutation.error as Error).message}
+            </p>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      </section>
+
+      <section className="space-y-3 rounded-xl border p-4">
+        <h2 className="font-medium">2) Pick a voice</h2>
+        {voicesLoading ? (
+          <p>Loading voices…</p>
+        ) : (
+          <select
+            className="border p-2 rounded w-full"
+            value={selectedVoiceId ?? ""}
+            onChange={(e) => setSelectedVoiceId(e.target.value || null)}
+          >
+            <option value="">— Select —</option>
+            {voices.map((v) => (
+              <option key={v.voice_id} value={v.voice_id}>
+                {v.name} ({v.category ?? "personal"})
+              </option>
+            ))}
+          </select>
+        )}
+        {selectedVoice && (
+          <p className="text-sm text-gray-600">Selected: {selectedVoice.name}</p>
+        )}
+      </section>
+
+      <section className="space-y-3 rounded-xl border p-4">
+        <h2 className="font-medium">3) Generate speech with this IVC</h2>
+        <button
+          className="px-4 py-2 rounded bg-indigo-600 text-white disabled:opacity-50"
+          disabled={!canSpeak}
+          onClick={() =>
+            selectedVoiceId &&
+            ttsMutation.mutate({ voiceId: selectedVoiceId, text: FIXED_TEXT })
+          }
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          {ttsMutation.isPending ? "Generating…" : "Speak the fixed text"}
+        </button>
+
+        {ttsMutation.isError && (
+          <p className="text-red-600 text-sm">{(ttsMutation.error as Error).message}</p>
+        )}
+
+        {audioUrl && (
+          <audio controls src={audioUrl} className="w-full">
+            Your browser does not support the <code>audio</code> element.
+          </audio>
+        )}
+      </section>
+    </main>
   );
 }
