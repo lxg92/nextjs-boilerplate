@@ -104,11 +104,26 @@ export default function Page() {
   // 4) useMutation: generate audio with TTS for the selected voice
   const ttsMutation = useMutation({
     mutationFn: async ({ voiceId, text }: { voiceId: string; text: string }) => {
-      // Replace dashes with SSML pause tags
+      // Replace dashes with SSML pause tags and speed controls
       let processedText = text
-        .replace(/---/g, '<break time="5s"/>')  // --- for 5 second pause
-        .replace(/--/g, '<break time="3s"/>')   // -- for 3 second pause  
-        .replace(/-/g, '<break time="1s"/>');   // - for 1 second pause
+        .replace(/---/g, '<break time="3s"/>')  // --- for 3 second pause
+        .replace(/--/g, '<break time="1s"/>')   // -- for 1 second pause  
+        .replace(/-/g, '<prosody rate="100%">')    // - for normal speed (100%)
+        .replace(/>>>/g, '<prosody rate="130%">')  // >>> for 30% faster
+        .replace(/>>/g, '<prosody rate="120%">')    // >> for 20% faster
+        .replace(/>/g, '<prosody rate="110%">')     // > for 10% faster
+        .replace(/<<</g, '<prosody rate="70%">')    // <<< for 30% slower
+        .replace(/<</g, '<prosody rate="80%">')     // << for 20% slower
+        .replace(/</g, '<prosody rate="90%">');     // < for 10% slower
+      
+      // Close any unclosed prosody tags
+      const openTags = (processedText.match(/<prosody/g) || []).length;
+      const closeTags = (processedText.match(/<\/prosody>/g) || []).length;
+      const unclosedTags = openTags - closeTags;
+      
+      if (unclosedTags > 0) {
+        processedText += '</prosody>'.repeat(unclosedTags);
+      }
       
       const r = await fetch("/api/tts", {
         method: "POST",
@@ -290,11 +305,11 @@ export default function Page() {
           
           <div>
             <label className="block text-sm font-medium mb-2">
-              Custom text (max 500 characters):
+              Custom text (max 2500 characters):
             </label>
             <textarea
-              className="border p-2 rounded w-full h-24 resize-none"
-              placeholder="Enter your text here... Use - for pauses: - (1s), -- (3s), --- (5s)"
+              className="border p-2 rounded w-full h-32 resize-none"
+              placeholder="Enter your text here... Use - for pauses and >/< for speed control"
               value={customText}
               onChange={(e) => {
                 setCustomText(e.target.value);
@@ -302,15 +317,21 @@ export default function Page() {
                   setSelectedDefaultText("");
                 }
               }}
-              maxLength={500}
+              maxLength={2500}
             />
-            <div className="flex justify-between items-center mt-1">
-              <p className="text-xs text-gray-500">
-                Pauses: <code className="bg-gray-100 px-1 rounded">-</code> (1s), <code className="bg-gray-100 px-1 rounded">--</code> (3s), <code className="bg-gray-100 px-1 rounded">---</code> (5s)
-              </p>
-              <span className={`text-xs ${customText.length > 500 ? 'text-red-500' : customText.length > 450 ? 'text-yellow-500' : 'text-gray-500'}`}>
-                {customText.length}/500
-              </span>
+            <div className="mt-2 space-y-1">
+              <div className="flex justify-between items-center">
+                <div className="text-xs text-gray-500">
+                  <span className="font-medium">Pauses:</span> <code className="bg-gray-100 px-1 rounded">--</code> (1s), <code className="bg-gray-100 px-1 rounded">---</code> (3s)
+                </div>
+                <span className={`text-xs ${customText.length > 2500 ? 'text-red-500' : customText.length > 2250 ? 'text-yellow-500' : 'text-gray-500'}`}>
+                  {customText.length}/2500
+                </span>
+              </div>
+              <div className="text-xs text-gray-500">
+                <span className="font-medium">Speed:</span> <code className="bg-gray-100 px-1 rounded">-</code> (100%), <code className="bg-gray-100 px-1 rounded">></code> (+10%), <code className="bg-gray-100 px-1 rounded">>></code> (+20%), <code className="bg-gray-100 px-1 rounded">>>></code> (+30%) | 
+                <code className="bg-gray-100 px-1 rounded"> < </code> (-10%), <code className="bg-gray-100 px-1 rounded"> << </code> (-20%), <code className="bg-gray-100 px-1 rounded"> <<< </code> (-30%)
+              </div>
             </div>
           </div>
           
