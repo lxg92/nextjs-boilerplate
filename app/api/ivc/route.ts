@@ -17,8 +17,6 @@ export async function POST(req: NextRequest) {
   upstream.set("name", name);
   upstream.append("files", file, file.name);
 
-
-
   const r = await fetch("https://api.elevenlabs.io/v1/voices/add", {
     method: "POST",
     headers: {

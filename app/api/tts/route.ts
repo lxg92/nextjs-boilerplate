@@ -7,15 +7,12 @@ export async function POST(req: NextRequest) {
   if (!voiceId || !text) {
     return new Response(JSON.stringify({ error: "voiceId and text are required" }), { status: 400 });
   }
-  const key = process.env.ELEVENLABS_API_KEY 
-  console.log(key);
-
   // ElevenLabs TTS REST: POST /v1/text-to-speech/:voice_id
   // Returns audio bytes. We'll pass them right back to the client.
   const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: "POST",
     headers: {
-      "xi-api-key": key!,
+      "xi-api-key": process.env.ELEVENLABS_API_KEY!,
       "Content-Type": "application/json",
       Accept: "audio/mpeg",
     },
