@@ -7,8 +7,12 @@ type VoicesResponse = {
   voices: Array<{ voice_id: string; name: string; category?: string }>;
 };
 
-const FIXED_TEXT =
-  "This is a text I want to read out and to make you understand what I am reading";
+const DEFAULT_TEXTS = [
+  "Hello, this is a test of the voice cloning system.",
+  "Welcome to our demonstration of text-to-speech technology.",
+  "This is a sample text to showcase the voice synthesis capabilities.",
+  "Thank you for using our voice cloning application today."
+];
 
 export default function Page() {
   const qc = useQueryClient();
@@ -17,6 +21,8 @@ export default function Page() {
   const [voiceName, setVoiceName] = useState("My IVC");
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [customText, setCustomText] = useState("");
+  const [selectedDefaultText, setSelectedDefaultText] = useState("");
 
   // 1) useQuery: fetch the current voices so we can pick the newly-created IVC
   const { data: voicesData, isLoading: voicesLoading } = useQuery<VoicesResponse>({
@@ -56,10 +62,16 @@ export default function Page() {
   // 4) useMutation: generate audio with TTS for the selected voice
   const ttsMutation = useMutation({
     mutationFn: async ({ voiceId, text }: { voiceId: string; text: string }) => {
+      // Replace dashes with SSML pause tags
+      let processedText = text
+        .replace(/---/g, '<break time="5s"/>')  // --- for 5 second pause
+        .replace(/--/g, '<break time="3s"/>')   // -- for 3 second pause  
+        .replace(/-/g, '<break time="1s"/>');   // - for 1 second pause
+      
       const r = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voiceId, text }),
+        body: JSON.stringify({ voiceId, text: processedText }),
       });
       if (!r.ok) throw new Error(await r.text());
       const blob = await r.blob();
@@ -158,27 +170,78 @@ export default function Page() {
       </section>
 
       <section className="space-y-3 rounded-xl border p-4">
-        <h2 className="font-medium">3) Generate speech with this IVC</h2>
-        <button
-          className="px-4 py-2 rounded bg-indigo-600 text-white disabled:opacity-50"
-          disabled={!canSpeak}
-          onClick={() =>
-            selectedVoiceId &&
-            ttsMutation.mutate({ voiceId: selectedVoiceId, text: FIXED_TEXT })
-          }
-        >
-          {ttsMutation.isPending ? "Generating…" : "Speak the fixed text"}
-        </button>
+        <h2 className="font-medium">3) Generate speech with this voice</h2>
+        
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-2">Choose default text or enter custom:</label>
+            <select
+              className="border p-2 rounded w-full mb-3"
+              value={selectedDefaultText}
+              onChange={(e) => {
+                setSelectedDefaultText(e.target.value);
+                if (e.target.value) {
+                  setCustomText(e.target.value);
+                }
+              }}
+            >
+              <option value="">— Select default text —</option>
+              {DEFAULT_TEXTS.map((text, index) => (
+                <option key={index} value={text}>
+                  {text.length > 50 ? text.substring(0, 50) + "..." : text}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Custom text (max 500 characters):
+            </label>
+            <textarea
+              className="border p-2 rounded w-full h-24 resize-none"
+              placeholder="Enter your text here... Use - for pauses: - (1s), -- (3s), --- (5s)"
+              value={customText}
+              onChange={(e) => {
+                setCustomText(e.target.value);
+                if (e.target.value !== selectedDefaultText) {
+                  setSelectedDefaultText("");
+                }
+              }}
+              maxLength={500}
+            />
+            <div className="flex justify-between items-center mt-1">
+              <p className="text-xs text-gray-500">
+                Pauses: <code className="bg-gray-100 px-1 rounded">-</code> (1s), <code className="bg-gray-100 px-1 rounded">--</code> (3s), <code className="bg-gray-100 px-1 rounded">---</code> (5s)
+              </p>
+              <span className={`text-xs ${customText.length > 500 ? 'text-red-500' : customText.length > 450 ? 'text-yellow-500' : 'text-gray-500'}`}>
+                {customText.length}/500
+              </span>
+            </div>
+          </div>
+          
+          <button
+            className="px-4 py-2 rounded bg-indigo-600 text-white disabled:opacity-50 w-full"
+            disabled={!canSpeak || !customText.trim()}
+            onClick={() =>
+              selectedVoiceId &&
+              customText.trim() &&
+              ttsMutation.mutate({ voiceId: selectedVoiceId, text: customText })
+            }
+          >
+            {ttsMutation.isPending ? "Generating…" : "Generate Speech"}
+          </button>
 
-        {ttsMutation.isError && (
-          <p className="text-red-600 text-sm">{(ttsMutation.error as Error).message}</p>
-        )}
+          {ttsMutation.isError && (
+            <p className="text-red-600 text-sm">{(ttsMutation.error as Error).message}</p>
+          )}
 
-        {audioUrl && (
-          <audio controls src={audioUrl} className="w-full">
-            Your browser does not support the <code>audio</code> element.
-          </audio>
-        )}
+          {audioUrl && (
+            <audio controls src={audioUrl} className="w-full">
+              Your browser does not support the <code>audio</code> element.
+            </audio>
+          )}
+        </div>
       </section>
     </main>
   );

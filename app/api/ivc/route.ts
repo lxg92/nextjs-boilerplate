@@ -17,14 +17,12 @@ export async function POST(req: NextRequest) {
   upstream.set("name", name);
   upstream.append("files", file, file.name);
 
-  const key = process.env.ELEVENLABS_API_KEY
-  console.log(key);
-  console.log(process.env.ELEVENLABS_API_KEY);
+
 
   const r = await fetch("https://api.elevenlabs.io/v1/voices/add", {
     method: "POST",
     headers: {
-      "xi-api-key": process.env.ELEVENLABS_API_KEY,
+      "xi-api-key": process.env.ELEVENLABS_API_KEY!,
     },
     body: upstream,
   });
