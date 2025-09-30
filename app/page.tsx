@@ -101,7 +101,26 @@ export default function Page() {
     },
   });
 
-  // 4) useMutation: generate audio with TTS for the selected voice
+  // 4) useMutation: delete a voice
+  const deleteVoiceMutation = useMutation({
+    mutationFn: async (voiceId: string) => {
+      const r = await fetch("/api/voices/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voiceId }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    },
+    onSuccess: async () => {
+      // Refresh voices list after deletion
+      await qc.invalidateQueries({ queryKey: ["voices"] });
+      // Clear selection if the deleted voice was selected
+      setSelectedVoiceId(null);
+    },
+  });
+
+  // 5) useMutation: generate audio with TTS for the selected voice
   const ttsMutation = useMutation({
     mutationFn: async ({ voiceId, text }: { voiceId: string; text: string }) => {
       // Replace dashes with SSML pause tags and speed controls
@@ -260,21 +279,59 @@ export default function Page() {
         {voicesLoading ? (
           <p>Loading voices…</p>
         ) : (
-          <select
-            className="border p-2 rounded w-full"
-            value={selectedVoiceId ?? ""}
-            onChange={(e) => setSelectedVoiceId(e.target.value || null)}
-          >
-            <option value="">— Select —</option>
-            {voices.map((v) => (
-              <option key={v.voice_id} value={v.voice_id}>
-                {v.name} ({v.category ?? "personal"})
-              </option>
-            ))}
-          </select>
+          <div className="space-y-3">
+            <select
+              className="border p-2 rounded w-full"
+              value={selectedVoiceId ?? ""}
+              onChange={(e) => setSelectedVoiceId(e.target.value || null)}
+            >
+              <option value="">— Select —</option>
+              {voices.map((v) => (
+                <option key={v.voice_id} value={v.voice_id}>
+                  {v.name} ({v.category ?? "personal"})
+                </option>
+              ))}
+            </select>
+            
+            {/* Voice list with delete buttons - only for cloned voices */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-gray-700">Your Cloned Voices:</h3>
+              {(() => {
+                const clonedVoices = voices.filter(voice => voice.category === "cloned" || voice.category === "instant");
+                return clonedVoices.length === 0 ? (
+                  <p className="text-sm text-gray-500">No cloned voices available. Upload a voice sample to create one.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {clonedVoices.map((voice) => (
+                      <div key={voice.voice_id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                        <div className="flex-1">
+                          <span className="text-sm font-medium">{voice.name}</span>
+                          <span className="text-xs text-gray-500 ml-2">({voice.category ?? "cloned"})</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete "${voice.name}"? This action cannot be undone.`)) {
+                              deleteVoiceMutation.mutate(voice.voice_id);
+                            }
+                          }}
+                          disabled={deleteVoiceMutation.isPending}
+                          className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deleteVoiceMutation.isPending ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
         )}
         {selectedVoice && (
           <p className="text-sm text-gray-600">Selected: {selectedVoice.name}</p>
+        )}
+        {deleteVoiceMutation.isError && (
+          <p className="text-red-600 text-sm">{(deleteVoiceMutation.error as Error).message}</p>
         )}
       </section>
 
@@ -329,8 +386,8 @@ export default function Page() {
                 </span>
               </div>
               <div className="text-xs text-gray-500">
-                <span className="font-medium">Speed:</span> <code className="bg-gray-100 px-1 rounded">-</code> (100%), <code className="bg-gray-100 px-1 rounded">></code> (+10%), <code className="bg-gray-100 px-1 rounded">>></code> (+20%), <code className="bg-gray-100 px-1 rounded">>>></code> (+30%) | 
-                <code className="bg-gray-100 px-1 rounded"> < </code> (-10%), <code className="bg-gray-100 px-1 rounded"> << </code> (-20%), <code className="bg-gray-100 px-1 rounded"> <<< </code> (-30%)
+                <span className="font-medium">Speed:</span> <code className="bg-gray-100 px-1 rounded">-</code> (100%), <code className="bg-gray-100 px-1 rounded">&gt;</code> (+10%), <code className="bg-gray-100 px-1 rounded">&gt;&gt;</code> (+20%), <code className="bg-gray-100 px-1 rounded">&gt;&gt;&gt;</code> (+30%) | 
+                <code className="bg-gray-100 px-1 rounded">&lt;</code> (-10%), <code className="bg-gray-100 px-1 rounded">&lt;&lt;</code> (-20%), <code className="bg-gray-100 px-1 rounded">&lt;&lt;&lt;</code> (-30%)
               </div>
             </div>
           </div>
