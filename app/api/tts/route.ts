@@ -7,12 +7,18 @@ export async function POST(req: NextRequest) {
   if (!voiceId || !text) {
     return new Response(JSON.stringify({ error: "voiceId and text are required" }), { status: 400 });
   }
+
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) {
+    return new Response(JSON.stringify({ error: "ELEVENLABS_API_KEY environment variable is not set" }), { status: 500 });
+  }
+
   // ElevenLabs TTS REST: POST /v1/text-to-speech/:voice_id
   // Returns audio bytes. We'll pass them right back to the client.
   const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: "POST",
     headers: {
-      "xi-api-key": process.env.ELEVENLABS_API_KEY!,
+      "xi-api-key": apiKey,
       "Content-Type": "application/json",
       Accept: "audio/mpeg",
     },

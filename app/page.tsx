@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 type VoicesResponse = {
@@ -23,6 +23,48 @@ export default function Page() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [customText, setCustomText] = useState("");
   const [selectedDefaultText, setSelectedDefaultText] = useState("");
+  
+  // Password protection state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
+  // Check authentication on component mount
+  useEffect(() => {
+    const checkAuth = () => {
+      const authData = localStorage.getItem('voiceAppAuth');
+      if (authData) {
+        const { timestamp } = JSON.parse(authData);
+        const now = Date.now();
+        const fifteenMinutes = 15 * 60 * 1000; // 15 minutes in milliseconds
+        
+        if (now - timestamp < fifteenMinutes) {
+          setIsAuthenticated(true);
+        } else {
+          // Session expired, clear storage
+          localStorage.removeItem('voiceAppAuth');
+        }
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Handle password submission
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === "vip") {
+      setIsAuthenticated(true);
+      setPasswordError("");
+      // Store authentication with timestamp
+      localStorage.setItem('voiceAppAuth', JSON.stringify({
+        timestamp: Date.now()
+      }));
+    } else {
+      setPasswordError("Incorrect password. Please try again.");
+      setPassword("");
+    }
+  };
 
   // 1) useQuery: fetch the current voices so we can pick the newly-created IVC
   const { data: voicesData, isLoading: voicesLoading } = useQuery<VoicesResponse>({
@@ -87,9 +129,61 @@ export default function Page() {
   const canCreate = !!file && !createIvcmutation.isPending;
   const canSpeak = !!selectedVoiceId && !ttsMutation.isPending;
 
+  // Show password form if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <main className="mx-auto max-w-md p-6">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="bg-white p-8 rounded-xl shadow-lg border w-full">
+            <h1 className="text-2xl font-semibold text-center mb-6">Voice Cloning App</h1>
+            <p className="text-gray-600 text-center mb-6">Please enter the password to access this application.</p>
+            
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  placeholder="Enter password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  autoFocus
+                />
+                {passwordError && (
+                  <p className="text-red-500 text-sm mt-2">{passwordError}</p>
+                )}
+              </div>
+              
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Access Application
+              </button>
+            </form>
+            
+            <p className="text-xs text-gray-500 text-center mt-4">
+              Session will remain active for 15 minutes
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-xl p-6 space-y-6">
-      <h1 className="text-2xl font-semibold">IVC → TTS demo</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold">IVC → TTS demo</h1>
+        <button
+          onClick={() => {
+            localStorage.removeItem('voiceAppAuth');
+            setIsAuthenticated(false);
+          }}
+          className="text-sm text-gray-500 hover:text-gray-700 underline"
+        >
+          Logout
+        </button>
+      </div>
 
       <section className="space-y-3 rounded-xl border p-4">
         <h2 className="font-medium">1) Upload your voice sample</h2>
