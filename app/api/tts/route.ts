@@ -2,7 +2,7 @@
 import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const { voiceId, text } = await req.json();
+  const { voiceId, text, speed } = await req.json();
 
   if (!voiceId || !text) {
     return new Response(JSON.stringify({ error: "voiceId and text are required" }), { status: 400 });
@@ -12,6 +12,9 @@ export async function POST(req: NextRequest) {
   if (!apiKey) {
     return new Response(JSON.stringify({ error: "ELEVENLABS_API_KEY environment variable is not set" }), { status: 500 });
   }
+
+  // Debug: Log what we're sending to ElevenLabs
+  console.log('Sending to ElevenLabs:', { voiceId, text, speed });
 
   // ElevenLabs TTS REST: POST /v1/text-to-speech/:voice_id
   // Returns audio bytes. We'll pass them right back to the client.
@@ -25,6 +28,8 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       text,
       model_id: "eleven_multilingual_v2", // a current, general-purpose model
+      output_format: "mp3_44100_128", // Explicitly set output format for better SSML support
+      voice_settings: { speed }, // speed multiplier
     }),
   });
 

@@ -23,6 +23,7 @@ export default function Page() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [customText, setCustomText] = useState("");
   const [selectedDefaultText, setSelectedDefaultText] = useState("");
+  const [speechSpeed, setSpeechSpeed] = useState(1.0); // Speed multiplier (0.7-1.2)
   
   // Password protection state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -123,31 +124,26 @@ export default function Page() {
   // 5) useMutation: generate audio with TTS for the selected voice
   const ttsMutation = useMutation({
     mutationFn: async ({ voiceId, text }: { voiceId: string; text: string }) => {
-      // Replace dashes with SSML pause tags and speed controls
+      // Replace dashes with SSML break tags (following ElevenLabs best practices)
       let processedText = text
         .replace(/---/g, '<break time="3s"/>')  // --- for 3 second pause
         .replace(/--/g, '<break time="1s"/>')   // -- for 1 second pause  
-        .replace(/-/g, '<prosody rate="100%">')    // - for normal speed (100%)
-        .replace(/>>>/g, '<prosody rate="130%">')  // >>> for 30% faster
-        .replace(/>>/g, '<prosody rate="120%">')    // >> for 20% faster
-        .replace(/>/g, '<prosody rate="110%">')     // > for 10% faster
-        .replace(/<<</g, '<prosody rate="70%">')    // <<< for 30% slower
-        .replace(/<</g, '<prosody rate="80%">')     // << for 20% slower
-        .replace(/</g, '<prosody rate="90%">');     // < for 10% slower
+        .replace(/(?<!-)-(?!-)/g, '<break time="0.5s"/>'); // single dash for short pause
       
-      // Close any unclosed prosody tags
-      const openTags = (processedText.match(/<prosody/g) || []).length;
-      const closeTags = (processedText.match(/<\/prosody>/g) || []).length;
-      const unclosedTags = openTags - closeTags;
+      // Apply global speed control from UI slider
+      // if (speechSpeed !== 1.0) {
+      //   processedText = `<prosody rate="${speechSpeed}">${processedText}</prosody>`;
+      // }
       
-      if (unclosedTags > 0) {
-        processedText += '</prosody>'.repeat(unclosedTags);
-      }
+      // Debug: Log the processed text to see what's being sent to ElevenLabs
+      console.log('Original text:', text);
+      console.log('Processed SSML:', processedText);
       
       const r = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voiceId, text: processedText }),
+        body: JSON.stringify({ voiceId, text: processedText, speed: speechSpeed }),
+        
       });
       if (!r.ok) throw new Error(await r.text());
       const blob = await r.blob();
@@ -367,7 +363,7 @@ export default function Page() {
             </label>
             <textarea
               className="border p-2 rounded w-full h-32 resize-none"
-              placeholder="Enter your text here... Use - for pauses and >/< for speed control"
+              placeholder="Enter your text here... Use -, --, --- for pauses. Speed is controlled by the slider below."
               value={customText}
               onChange={(e) => {
                 setCustomText(e.target.value);
@@ -380,15 +376,36 @@ export default function Page() {
             <div className="mt-2 space-y-1">
               <div className="flex justify-between items-center">
                 <div className="text-xs text-gray-500">
-                  <span className="font-medium">Pauses:</span> <code className="bg-gray-100 px-1 rounded">--</code> (1s), <code className="bg-gray-100 px-1 rounded">---</code> (3s)
+                  <span className="font-medium">Pauses:</span> <code className="bg-gray-100 px-1 rounded">-</code> (0.5s), <code className="bg-gray-100 px-1 rounded">--</code> (1s), <code className="bg-gray-100 px-1 rounded">---</code> (3s)
                 </div>
                 <span className={`text-xs ${customText.length > 2500 ? 'text-red-500' : customText.length > 2250 ? 'text-yellow-500' : 'text-gray-500'}`}>
                   {customText.length}/2500
                 </span>
               </div>
-              <div className="text-xs text-gray-500">
-                <span className="font-medium">Speed:</span> <code className="bg-gray-100 px-1 rounded">-</code> (100%), <code className="bg-gray-100 px-1 rounded">&gt;</code> (+10%), <code className="bg-gray-100 px-1 rounded">&gt;&gt;</code> (+20%), <code className="bg-gray-100 px-1 rounded">&gt;&gt;&gt;</code> (+30%) | 
-                <code className="bg-gray-100 px-1 rounded">&lt;</code> (-10%), <code className="bg-gray-100 px-1 rounded">&lt;&lt;</code> (-20%), <code className="bg-gray-100 px-1 rounded">&lt;&lt;&lt;</code> (-30%)
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Speech Speed: {speechSpeed}x
+            </label>
+            <div className="space-y-2">
+              <input
+                type="range"
+                min="0.7"
+                max="1.2"
+                step="0.1"
+                value={speechSpeed}
+                onChange={(e) => setSpeechSpeed(parseFloat(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                style={{
+                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((speechSpeed - 0.7) / 0.5) * 100}%, #e5e7eb ${((speechSpeed - 0.7) / 0.5) * 100}%, #e5e7eb 100%)`
+                }}
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>0.7x (Slow)</span>
+                <span>1.0x (Normal)</span>
+                <span>1.2x (Fast)</span>
               </div>
             </div>
           </div>
