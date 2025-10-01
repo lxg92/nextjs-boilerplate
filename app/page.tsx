@@ -280,29 +280,30 @@ export default function Page() {
           <p>Loading voices…</p>
         ) : (
           <div className="space-y-3">
-            <select
-              className="border p-2 rounded w-full"
-              value={selectedVoiceId ?? ""}
-              onChange={(e) => setSelectedVoiceId(e.target.value || null)}
-            >
-              <option value="">— Select —</option>
-              {voices.map((v) => (
-                <option key={v.voice_id} value={v.voice_id}>
-                  {v.name} ({v.category ?? "personal"})
-                </option>
-              ))}
-            </select>
-            
-            {/* Voice list with delete buttons - only for cloned voices */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-gray-700">Your Cloned Voices:</h3>
-              {(() => {
-                const clonedVoices = voices.filter(voice => voice.category === "cloned" || voice.category === "instant");
-                return clonedVoices.length === 0 ? (
-                  <p className="text-sm text-gray-500">No cloned voices available. Upload a voice sample to create one.</p>
-                ) : (
+            {voices.length === 0 ? (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-500">No user-generated voices available. Upload a voice sample to create one.</p>
+              </div>
+            ) : (
+              <>
+                <select
+                  className="border p-2 rounded w-full"
+                  value={selectedVoiceId ?? ""}
+                  onChange={(e) => setSelectedVoiceId(e.target.value || null)}
+                >
+                  <option value="">— Select —</option>
+                  {voices.map((v) => (
+                    <option key={v.voice_id} value={v.voice_id}>
+                      {v.name} ({v.category ?? "personal"})
+                    </option>
+                  ))}
+                </select>
+                
+                {/* Voice list with delete buttons */}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-gray-700">Your Voices:</h3>
                   <div className="space-y-1">
-                    {clonedVoices.map((voice) => (
+                    {voices.map((voice) => (
                       <div key={voice.voice_id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
                         <div className="flex-1">
                           <span className="text-sm font-medium">{voice.name}</span>
@@ -322,9 +323,9 @@ export default function Page() {
                       </div>
                     ))}
                   </div>
-                );
-              })()}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         )}
         {selectedVoice && (

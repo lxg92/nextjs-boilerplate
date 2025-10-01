@@ -18,5 +18,14 @@ export async function GET() {
   }
 
   const json = await r.json();
-  return NextResponse.json(json);
+  
+  // Filter to only return user-generated voices (cloned or instant voices)
+  const userGeneratedVoices = json.voices.filter((voice: any) => 
+    voice.category === "cloned" || voice.category === "instant"
+  );
+  
+  return NextResponse.json({
+    ...json,
+    voices: userGeneratedVoices
+  });
 }
