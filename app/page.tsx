@@ -1,438 +1,112 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUser } from '@auth0/nextjs-auth0/client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-type VoicesResponse = {
-  voices: Array<{ voice_id: string; name: string; category?: string }>;
-};
+export default function HomePage() {
+  const { user, isLoading } = useUser();
+  const router = useRouter();
 
-const DEFAULT_TEXTS = [
-  "Hello, this is a test of the voice cloning system.",
-  "Welcome to our demonstration of text-to-speech technology.",
-  "This is a sample text to showcase the voice synthesis capabilities.",
-  "Thank you for using our voice cloning application today."
-];
-
-export default function Page() {
-  const qc = useQueryClient();
-
-  const [file, setFile] = useState<File | null>(null);
-  const [voiceName, setVoiceName] = useState("My IVC");
-  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [customText, setCustomText] = useState("");
-  const [selectedDefaultText, setSelectedDefaultText] = useState("");
-  const [speechSpeed, setSpeechSpeed] = useState(1.0); // Speed multiplier (0.7-1.2)
-  
-  // Password protection state
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-
-  // Check authentication on component mount
   useEffect(() => {
-    const checkAuth = () => {
-      const authData = localStorage.getItem('voiceAppAuth');
-      if (authData) {
-        const { timestamp } = JSON.parse(authData);
-        const now = Date.now();
-        const fifteenMinutes = 15 * 60 * 1000; // 15 minutes in milliseconds
-        
-        if (now - timestamp < fifteenMinutes) {
-          setIsAuthenticated(true);
-        } else {
-          // Session expired, clear storage
-          localStorage.removeItem('voiceAppAuth');
-        }
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  // Handle password submission
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === "vip") {
-      setIsAuthenticated(true);
-      setPasswordError("");
-      // Store authentication with timestamp
-      localStorage.setItem('voiceAppAuth', JSON.stringify({
-        timestamp: Date.now()
-      }));
-    } else {
-      setPasswordError("Incorrect password. Please try again.");
-      setPassword("");
+    if (!isLoading && user) {
+      router.push('/dashboard');
     }
-  };
+  }, [user, isLoading, router]);
 
-  // 1) useQuery: fetch the current voices so we can pick the newly-created IVC
-  const { data: voicesData, isLoading: voicesLoading } = useQuery<VoicesResponse>({
-    queryKey: ["voices"],
-    queryFn: async () => {
-      const r = await fetch("/api/voices", { cache: "no-store" });
-      if (!r.ok) throw new Error("Failed to fetch voices");
-      return r.json();
-    },
-    staleTime: 0,
-  });
-
-  const voices = voicesData?.voices ?? [];
-  const selectedVoice = useMemo(
-    () => voices.find((v) => v.voice_id === selectedVoiceId) ?? null,
-    [voices, selectedVoiceId]
-  );
-
-  // 2) useMutation: create an Instant Voice Clone from the uploaded file
-  const createIvcmutation = useMutation({
-    mutationFn: async ({ file, name }: { file: File; name: string }) => {
-      const fd = new FormData();
-      fd.set("name", name);
-      fd.set("file", file, file.name);
-      const r = await fetch("/api/ivc", { method: "POST", body: fd });
-      if (!r.ok) throw new Error(await r.text());
-      return r.json() as Promise<{ voice_id: string }>;
-    },
-    onSuccess: async (payload) => {
-      const newId = (payload as any).voice_id;
-      // 3) useQueryClient: refresh cached voices, then auto-select the new one
-      await qc.invalidateQueries({ queryKey: ["voices"] });
-      setSelectedVoiceId(newId);
-    },
-  });
-
-  // 4) useMutation: delete a voice
-  const deleteVoiceMutation = useMutation({
-    mutationFn: async (voiceId: string) => {
-      const r = await fetch("/api/voices/delete", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voiceId }),
-      });
-      if (!r.ok) throw new Error(await r.text());
-      return r.json();
-    },
-    onSuccess: async () => {
-      // Refresh voices list after deletion
-      await qc.invalidateQueries({ queryKey: ["voices"] });
-      // Clear selection if the deleted voice was selected
-      setSelectedVoiceId(null);
-    },
-  });
-
-  // 5) useMutation: generate audio with TTS for the selected voice
-  const ttsMutation = useMutation({
-    mutationFn: async ({ voiceId, text }: { voiceId: string; text: string }) => {
-      // Replace dashes with SSML break tags (following ElevenLabs best practices)
-      let processedText = text
-        .replace(/---/g, '<break time="3s"/>')  // --- for 3 second pause
-        .replace(/--/g, '<break time="1s"/>')   // -- for 1 second pause  
-        .replace(/(?<!-)-(?!-)/g, '<break time="0.5s"/>'); // single dash for short pause
-      
-      // Apply global speed control from UI slider
-      // if (speechSpeed !== 1.0) {
-      //   processedText = `<prosody rate="${speechSpeed}">${processedText}</prosody>`;
-      // }
-      
-      // Debug: Log the processed text to see what's being sent to ElevenLabs
-      console.log('Original text:', text);
-      console.log('Processed SSML:', processedText);
-      
-      const r = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voiceId, text: processedText, speed: speechSpeed }),
-        
-      });
-      if (!r.ok) throw new Error(await r.text());
-      const blob = await r.blob();
-      return URL.createObjectURL(blob);
-    },
-    onSuccess: (url) => {
-      // assign output to an <audio> tag
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-      setAudioUrl(url);
-    },
-  });
-
-  const canCreate = !!file && !createIvcmutation.isPending;
-  const canSpeak = !!selectedVoiceId && !ttsMutation.isPending;
-
-  // Show password form if not authenticated
-  if (!isAuthenticated) {
+  if (isLoading) {
     return (
-      <main className="mx-auto max-w-md p-6">
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="bg-white p-8 rounded-xl shadow-lg border w-full">
-            <h1 className="text-2xl font-semibold text-center mb-6">Voice Cloning App</h1>
-            <p className="text-gray-600 text-center mb-6">Please enter the password to access this application.</p>
-            
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div>
-                <input
-                  type="password"
-                  placeholder="Enter password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  autoFocus
-                />
-                {passwordError && (
-                  <p className="text-red-500 text-sm mt-2">{passwordError}</p>
-                )}
-              </div>
-              
-              <button
-                type="submit"
-                className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                Access Application
-              </button>
-            </form>
-            
-            <p className="text-xs text-gray-500 text-center mt-4">
-              Session will remain active for 15 minutes
-            </p>
-          </div>
-        </div>
-      </main>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
     );
   }
 
   return (
-    <main className="mx-auto max-w-xl p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">IVC → TTS demo</h1>
-        <button
-          onClick={() => {
-            localStorage.removeItem('voiceAppAuth');
-            setIsAuthenticated(false);
-          }}
-          className="text-sm text-gray-500 hover:text-gray-700 underline"
-        >
-          Logout
-        </button>
+    <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Navigation */}
+        <nav className="flex justify-between items-center py-6">
+          <div className="text-2xl font-bold text-gray-900">VoiceClone AI</div>
+          <div className="space-x-4">
+            <a href="/pricing" className="text-gray-600 hover:text-gray-900">Pricing</a>
+            <a href="/api/auth/login" className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">
+              Sign In
+            </a>
+          </div>
+        </nav>
+
+        {/* Hero Section */}
+        <div className="text-center py-20">
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            Clone Any Voice with AI
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            Create high-quality voice clones and generate natural speech using advanced AI technology. 
+            Perfect for content creators, developers, and businesses.
+          </p>
+          <div className="space-x-4">
+            <a href="/api/auth/login" className="bg-indigo-600 text-white px-8 py-4 rounded-lg text-lg font-medium hover:bg-indigo-700">
+              Get Started Free
+            </a>
+            <a href="/pricing" className="bg-white text-gray-900 px-8 py-4 rounded-lg text-lg font-medium border border-gray-300 hover:bg-gray-50">
+              View Pricing
+            </a>
+          </div>
+        </div>
+
+        {/* Features Section */}
+        <div className="py-20">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+            Powerful Features
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Instant Voice Cloning</h3>
+              <p className="text-gray-600">Upload a short audio sample and create a voice clone in seconds</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V1a1 1 0 011-1h2a1 1 0 011 1v18a1 1 0 01-1 1H4a1 1 0 01-1-1V1a1 1 0 011-1h2a1 1 0 011 1v3m0 0h8m-8 0v16a1 1 0 001 1h6a1 1 0 001-1V4H7z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Advanced SSML</h3>
+              <p className="text-gray-600">Control speech with pauses, emphasis, and pronunciation</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-2">High Quality Audio</h3>
+              <p className="text-gray-600">Generate studio-quality audio with natural-sounding voices</p>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA Section */}
+        <div className="bg-indigo-600 text-white py-16 rounded-2xl text-center">
+          <h2 className="text-3xl font-bold mb-4">Ready to get started?</h2>
+          <p className="text-xl text-indigo-100 mb-8">Join thousands of users creating amazing voice content</p>
+          <a href="/api/auth/login" className="bg-white text-indigo-600 px-8 py-4 rounded-lg text-lg font-medium hover:bg-gray-100">
+            Start Free Trial
+          </a>
+        </div>
+
+        {/* Footer */}
+        <footer className="py-12 text-center text-gray-600">
+          <p>&copy; 2024 VoiceClone AI. All rights reserved.</p>
+        </footer>
       </div>
-
-      <section className="space-y-3 rounded-xl border p-4">
-        <h2 className="font-medium">1) Upload your voice sample</h2>
-        
-        <div className="space-y-3">
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-            <input
-              type="file"
-              accept="audio/*"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="hidden"
-              id="file-upload"
-            />
-            <label
-              htmlFor="file-upload"
-              className="cursor-pointer block"
-            >
-              <div className="text-gray-600 mb-2">
-                {file ? (
-                  <div>
-                    <p className="text-green-600 font-medium">✓ {file.name}</p>
-                    <p className="text-sm text-gray-500">Click to change file</p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-lg">📁 Click to upload audio file</p>
-                    <p className="text-sm text-gray-500">Supports MP3, WAV, M4A, etc.</p>
-                  </div>
-                )}
-              </div>
-            </label>
-          </div>
-          
-          <input
-            className="border p-2 rounded w-full"
-            placeholder="Voice name"
-            value={voiceName}
-            onChange={(e) => setVoiceName(e.target.value)}
-          />
-          
-          <button
-            className="px-4 py-2 rounded bg-black text-white disabled:opacity-50 w-full"
-            disabled={!canCreate}
-            onClick={() => file && createIvcmutation.mutate({ file, name: voiceName })}
-          >
-            {createIvcmutation.isPending ? "Cloning…" : "Create Instant Voice Clone"}
-          </button>
-          
-          {createIvcmutation.isError && (
-            <p className="text-red-600 text-sm">
-              {(createIvcmutation.error as Error).message}
-            </p>
-          )}
-        </div>
-      </section>
-
-      <section className="space-y-3 rounded-xl border p-4">
-        <h2 className="font-medium">2) Pick a voice</h2>
-        {voicesLoading ? (
-          <p>Loading voices…</p>
-        ) : (
-          <div className="space-y-3">
-            {voices.length === 0 ? (
-              <div className="space-y-3">
-                <p className="text-sm text-gray-500">No user-generated voices available. Upload a voice sample to create one.</p>
-              </div>
-            ) : (
-              <>
-                <select
-                  className="border p-2 rounded w-full"
-                  value={selectedVoiceId ?? ""}
-                  onChange={(e) => setSelectedVoiceId(e.target.value || null)}
-                >
-                  <option value="">— Select —</option>
-                  {voices.map((v) => (
-                    <option key={v.voice_id} value={v.voice_id}>
-                      {v.name} ({v.category ?? "personal"})
-                    </option>
-                  ))}
-                </select>
-                
-                {/* Voice list with delete buttons */}
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-gray-700">Your Voices:</h3>
-                  <div className="space-y-1">
-                    {voices.map((voice) => (
-                      <div key={voice.voice_id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                        <div className="flex-1">
-                          <span className="text-sm font-medium">{voice.name}</span>
-                          <span className="text-xs text-gray-500 ml-2">({voice.category ?? "cloned"})</span>
-                        </div>
-                        <button
-                          onClick={() => {
-                            if (confirm(`Are you sure you want to delete "${voice.name}"? This action cannot be undone.`)) {
-                              deleteVoiceMutation.mutate(voice.voice_id);
-                            }
-                          }}
-                          disabled={deleteVoiceMutation.isPending}
-                          className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {deleteVoiceMutation.isPending ? "Deleting..." : "Delete"}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-        {selectedVoice && (
-          <p className="text-sm text-gray-600">Selected: {selectedVoice.name}</p>
-        )}
-        {deleteVoiceMutation.isError && (
-          <p className="text-red-600 text-sm">{(deleteVoiceMutation.error as Error).message}</p>
-        )}
-      </section>
-
-      <section className="space-y-3 rounded-xl border p-4">
-        <h2 className="font-medium">3) Generate speech with this voice</h2>
-        
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium mb-2">Choose default text or enter custom:</label>
-            <select
-              className="border p-2 rounded w-full mb-3"
-              value={selectedDefaultText}
-              onChange={(e) => {
-                setSelectedDefaultText(e.target.value);
-                if (e.target.value) {
-                  setCustomText(e.target.value);
-                }
-              }}
-            >
-              <option value="">— Select default text —</option>
-              {DEFAULT_TEXTS.map((text, index) => (
-                <option key={index} value={text}>
-                  {text.length > 50 ? text.substring(0, 50) + "..." : text}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Custom text (max 2500 characters):
-            </label>
-            <textarea
-              className="border p-2 rounded w-full h-32 resize-none"
-              placeholder="Enter your text here... Use -, --, --- for pauses. Speed is controlled by the slider below."
-              value={customText}
-              onChange={(e) => {
-                setCustomText(e.target.value);
-                if (e.target.value !== selectedDefaultText) {
-                  setSelectedDefaultText("");
-                }
-              }}
-              maxLength={2500}
-            />
-            <div className="mt-2 space-y-1">
-              <div className="flex justify-between items-center">
-                <div className="text-xs text-gray-500">
-                  <span className="font-medium">Pauses:</span> <code className="bg-gray-100 px-1 rounded">-</code> (0.5s), <code className="bg-gray-100 px-1 rounded">--</code> (1s), <code className="bg-gray-100 px-1 rounded">---</code> (3s)
-                </div>
-                <span className={`text-xs ${customText.length > 2500 ? 'text-red-500' : customText.length > 2250 ? 'text-yellow-500' : 'text-gray-500'}`}>
-                  {customText.length}/2500
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Speech Speed: {speechSpeed}x
-            </label>
-            <div className="space-y-2">
-              <input
-                type="range"
-                min="0.7"
-                max="1.2"
-                step="0.1"
-                value={speechSpeed}
-                onChange={(e) => setSpeechSpeed(parseFloat(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                style={{
-                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((speechSpeed - 0.7) / 0.5) * 100}%, #e5e7eb ${((speechSpeed - 0.7) / 0.5) * 100}%, #e5e7eb 100%)`
-                }}
-              />
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>0.7x (Slow)</span>
-                <span>1.0x (Normal)</span>
-                <span>1.2x (Fast)</span>
-              </div>
-            </div>
-          </div>
-          
-          <button
-            className="px-4 py-2 rounded bg-indigo-600 text-white disabled:opacity-50 w-full"
-            disabled={!canSpeak || !customText.trim()}
-            onClick={() =>
-              selectedVoiceId &&
-              customText.trim() &&
-              ttsMutation.mutate({ voiceId: selectedVoiceId, text: customText })
-            }
-          >
-            {ttsMutation.isPending ? "Generating…" : "Generate Speech"}
-          </button>
-
-          {ttsMutation.isError && (
-            <p className="text-red-600 text-sm">{(ttsMutation.error as Error).message}</p>
-          )}
-
-          {audioUrl && (
-            <audio controls src={audioUrl} className="w-full">
-              Your browser does not support the <code>audio</code> element.
-            </audio>
-          )}
-        </div>
-      </section>
     </main>
   );
 }
