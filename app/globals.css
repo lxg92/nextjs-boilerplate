@@ -2,12 +2,34 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f0f0f;
+  --primary: #0066cc;
+  --primary-hover: #0052a3;
+  --secondary: #6b7280;
+  --secondary-hover: #4b5563;
+  --success: #16a34a;
+  --success-hover: #15803d;
+  --error: #dc2626;
+  --error-hover: #b91c1c;
+  --warning: #ea580c;
+  --warning-hover: #c2410c;
+  --border: #d1d5db;
+  --border-focus: #3b82f6;
+  --disabled: #9ca3af;
+  --disabled-bg: #f3f4f6;
+  --code-bg: #f8fafc;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-success: var(--success);
+  --color-error: var(--error);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-disabled: var(--disabled);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -15,7 +37,22 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground: #fafafa;
+    --primary: #60a5fa;
+    --primary-hover: #93c5fd;
+    --secondary: #9ca3af;
+    --secondary-hover: #d1d5db;
+    --success: #4ade80;
+    --success-hover: #6ee7b7;
+    --error: #f87171;
+    --error-hover: #fc8181;
+    --warning: #fb923c;
+    --warning-hover: #fdba74;
+    --border: #374151;
+    --border-focus: #60a5fa;
+    --disabled: #6b7280;
+    --disabled-bg: #1f2937;
+    --code-bg: #111827;
   }
 }
 
@@ -31,18 +68,40 @@ body {
   height: 20px;
   width: 20px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: var(--primary);
   cursor: pointer;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 3px solid var(--background);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: var(--primary-hover);
+  transform: scale(1.05);
+}
+
+.slider::-webkit-slider-thumb:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
 }
 
 .slider::-moz-range-thumb {
   height: 20px;
   width: 20px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: var(--primary);
   cursor: pointer;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 3px solid var(--background);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  background: var(--primary-hover);
+  transform: scale(1.05);
+}
+
+.slider::-moz-range-thumb:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
 }

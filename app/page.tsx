@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AudioPlayer } from "./components/AudioPlayer";
 
 type VoicesResponse = {
   voices: Array<{ voice_id: string; name: string; category?: string }>;
@@ -164,9 +165,9 @@ export default function Page() {
     return (
       <main className="mx-auto max-w-md p-6">
         <div className="min-h-screen flex items-center justify-center">
-          <div className="bg-white p-8 rounded-xl shadow-lg border w-full">
-            <h1 className="text-2xl font-semibold text-center mb-6">Voice Cloning App</h1>
-            <p className="text-gray-600 text-center mb-6">Please enter the password to access this application.</p>
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg border w-full">
+          <h1 className="text-2xl font-semibold text-center mb-6 text-gray-900 dark:text-white">Voice Cloning App</h1>
+          <p className="text-gray-700 dark:text-gray-300 text-center mb-6">Please enter the password to access this application.</p>
             
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div>
@@ -175,23 +176,23 @@ export default function Page() {
                   placeholder="Enter password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
                   autoFocus
                 />
                 {passwordError && (
-                  <p className="text-red-500 text-sm mt-2">{passwordError}</p>
+                  <p className="text-red-600 dark:text-red-400 text-sm mt-2 font-medium">{passwordError}</p>
                 )}
               </div>
               
               <button
                 type="submit"
-                className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+                className="w-full bg-blue-600 dark:bg-blue-700 text-white py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 Access Application
               </button>
             </form>
             
-            <p className="text-xs text-gray-500 text-center mt-4">
+            <p className="text-xs text-gray-600 dark:text-gray-400 text-center mt-4">
               Session will remain active for 15 minutes
             </p>
           </div>
@@ -203,23 +204,23 @@ export default function Page() {
   return (
     <main className="mx-auto max-w-xl p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">IVC → TTS demo</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">IVC → TTS demo</h1>
         <button
           onClick={() => {
             localStorage.removeItem('voiceAppAuth');
             setIsAuthenticated(false);
           }}
-          className="text-sm text-gray-500 hover:text-gray-700 underline"
+          className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded transition-colors"
         >
           Logout
         </button>
       </div>
 
-      <section className="space-y-3 rounded-xl border p-4">
-        <h2 className="font-medium">1) Upload your voice sample</h2>
+      <section className="space-y-3 rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+        <h2 className="font-medium text-gray-900 dark:text-white">1) Upload your voice sample</h2>
         
         <div className="space-y-3">
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
             <input
               type="file"
               accept="audio/*"
@@ -231,16 +232,16 @@ export default function Page() {
               htmlFor="file-upload"
               className="cursor-pointer block"
             >
-              <div className="text-gray-600 mb-2">
+              <div className="text-gray-700 dark:text-gray-300 mb-2">
                 {file ? (
                   <div>
-                    <p className="text-green-600 font-medium">✓ {file.name}</p>
-                    <p className="text-sm text-gray-500">Click to change file</p>
+                    <p className="text-green-600 dark:text-green-400 font-medium">✓ {file.name}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Click to change file</p>
                   </div>
                 ) : (
                   <div>
-                    <p className="text-lg">📁 Click to upload audio file</p>
-                    <p className="text-sm text-gray-500">Supports MP3, WAV, M4A, etc.</p>
+                    <p className="text-lg text-gray-900 dark:text-white">📁 Click to upload audio file</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Supports MP3, WAV, M4A, etc.</p>
                   </div>
                 )}
               </div>
@@ -248,14 +249,14 @@ export default function Page() {
           </div>
           
           <input
-            className="border p-2 rounded w-full"
+            className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
             placeholder="Voice name"
             value={voiceName}
             onChange={(e) => setVoiceName(e.target.value)}
           />
           
           <button
-            className="px-4 py-2 rounded bg-black text-white disabled:opacity-50 w-full"
+            className="px-4 py-2 rounded bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed w-full font-medium focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
             disabled={!canCreate}
             onClick={() => file && createIvcmutation.mutate({ file, name: voiceName })}
           >
@@ -263,27 +264,27 @@ export default function Page() {
           </button>
           
           {createIvcmutation.isError && (
-            <p className="text-red-600 text-sm">
+            <p className="text-red-600 dark:text-red-400 text-sm font-medium">
               {(createIvcmutation.error as Error).message}
             </p>
           )}
         </div>
       </section>
 
-      <section className="space-y-3 rounded-xl border p-4">
-        <h2 className="font-medium">2) Pick a voice</h2>
+      <section className="space-y-3 rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+        <h2 className="font-medium text-gray-900 dark:text-white">2) Pick a voice</h2>
         {voicesLoading ? (
-          <p>Loading voices…</p>
+          <p className="text-gray-700 dark:text-gray-300">Loading voices…</p>
         ) : (
           <div className="space-y-3">
             {voices.length === 0 ? (
               <div className="space-y-3">
-                <p className="text-sm text-gray-500">No user-generated voices available. Upload a voice sample to create one.</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">No user-generated voices available. Upload a voice sample to create one.</p>
               </div>
             ) : (
               <>
                 <select
-                  className="border p-2 rounded w-full"
+                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
                   value={selectedVoiceId ?? ""}
                   onChange={(e) => setSelectedVoiceId(e.target.value || null)}
                 >
@@ -297,13 +298,13 @@ export default function Page() {
                 
                 {/* Voice list with delete buttons */}
                 <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-gray-700">Your Voices:</h3>
+                  <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">Your Voices:</h3>
                   <div className="space-y-1">
                     {voices.map((voice) => (
-                      <div key={voice.voice_id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                      <div key={voice.voice_id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-600">
                         <div className="flex-1">
-                          <span className="text-sm font-medium">{voice.name}</span>
-                          <span className="text-xs text-gray-500 ml-2">({voice.category ?? "cloned"})</span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">{voice.name}</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">({voice.category ?? "cloned"})</span>
                         </div>
                         <button
                           onClick={() => {
@@ -312,7 +313,7 @@ export default function Page() {
                             }
                           }}
                           disabled={deleteVoiceMutation.isPending}
-                          className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-2 py-1 text-xs bg-red-600 dark:bg-red-700 text-white rounded hover:bg-red-700 dark:hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
                         >
                           {deleteVoiceMutation.isPending ? "Deleting..." : "Delete"}
                         </button>
@@ -325,21 +326,21 @@ export default function Page() {
           </div>
         )}
         {selectedVoice && (
-          <p className="text-sm text-gray-600">Selected: {selectedVoice.name}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">Selected: {selectedVoice.name}</p>
         )}
         {deleteVoiceMutation.isError && (
-          <p className="text-red-600 text-sm">{(deleteVoiceMutation.error as Error).message}</p>
+          <p className="text-red-600 dark:text-red-400 text-sm font-medium">{(deleteVoiceMutation.error as Error).message}</p>
         )}
       </section>
 
-      <section className="space-y-3 rounded-xl border p-4">
-        <h2 className="font-medium">3) Generate speech with this voice</h2>
+      <section className="space-y-3 rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+        <h2 className="font-medium text-gray-900 dark:text-white">3) Generate speech with this voice</h2>
         
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium mb-2">Choose default text or enter custom:</label>
+            <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">Choose default text or enter custom:</label>
             <select
-              className="border p-2 rounded w-full mb-3"
+              className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded w-full mb-3 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
               value={selectedDefaultText}
               onChange={(e) => {
                 setSelectedDefaultText(e.target.value);
@@ -358,11 +359,11 @@ export default function Page() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">
               Custom text (max 2500 characters):
             </label>
             <textarea
-              className="border p-2 rounded w-full h-32 resize-none"
+              className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded w-full h-32 resize-none focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
               placeholder="Enter your text here... Use -, --, --- for pauses. Speed is controlled by the slider below."
               value={customText}
               onChange={(e) => {
@@ -375,10 +376,10 @@ export default function Page() {
             />
             <div className="mt-2 space-y-1">
               <div className="flex justify-between items-center">
-                <div className="text-xs text-gray-500">
-                  <span className="font-medium">Pauses:</span> <code className="bg-gray-100 px-1 rounded">-</code> (0.5s), <code className="bg-gray-100 px-1 rounded">--</code> (1s), <code className="bg-gray-100 px-1 rounded">---</code> (3s)
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  <span className="font-medium">Pauses:</span> <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">-</code> (0.5s), <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">--</code> (1s), <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">---</code> (3s)
                 </div>
-                <span className={`text-xs ${customText.length > 2500 ? 'text-red-500' : customText.length > 2250 ? 'text-yellow-500' : 'text-gray-500'}`}>
+                <span className={`text-xs font-medium ${customText.length > 2500 ? 'text-red-600 dark:text-red-400' : customText.length > 2250 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-600 dark:text-gray-400'}`}>
                   {customText.length}/2500
                 </span>
               </div>
@@ -386,7 +387,7 @@ export default function Page() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">
               Speech Speed: {speechSpeed}x
             </label>
             <div className="space-y-2">
@@ -402,7 +403,7 @@ export default function Page() {
                     background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((speechSpeed - 0.7) / 0.5) * 100}%, #e5e7eb ${((speechSpeed - 0.7) / 0.5) * 100}%, #e5e7eb 100%)`
                 }}
               />
-              <div className="flex justify-between text-xs text-gray-500">
+              <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
                 <span>0.7x (Slow)</span>
                 <span>1.0x (Normal)</span>
                 <span>1.2x (Fast)</span>
@@ -411,7 +412,7 @@ export default function Page() {
           </div>
           
           <button
-            className="px-4 py-2 rounded bg-indigo-600 text-white disabled:opacity-50 w-full"
+            className="px-4 py-2 rounded bg-blue-600 dark:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed w-full font-medium hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
             disabled={!canSpeak || !customText.trim()}
             onClick={() =>
               selectedVoiceId &&
@@ -423,14 +424,10 @@ export default function Page() {
           </button>
 
           {ttsMutation.isError && (
-            <p className="text-red-600 text-sm">{(ttsMutation.error as Error).message}</p>
+            <p className="text-red-600 dark:text-red-400 text-sm font-medium">{(ttsMutation.error as Error).message}</p>
           )}
 
-          {audioUrl && (
-            <audio controls src={audioUrl} className="w-full">
-              Your browser does not support the <code>audio</code> element.
-            </audio>
-          )}
+          {audioUrl && <AudioPlayer audioUrl={audioUrl} />}
         </div>
       </section>
     </main>
