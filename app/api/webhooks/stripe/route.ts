@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { db } from '@/lib/database';
 import { getSubscriptionTier } from '@/lib/subscription-tiers';
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
           await db.updateUser(user.id, {
             subscriptionStatus: 'canceled',
             subscriptionTier: 'free',
-            stripeSubscriptionId: null,
+            stripeSubscriptionId: undefined,
           });
         }
         break;
