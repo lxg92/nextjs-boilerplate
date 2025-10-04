@@ -1,9 +1,16 @@
-import { ChannelConfig, AudioProcessingState } from "../hooks/useAudioProcessing";
+import { ChannelConfig } from "../hooks/useAudioProcessing";
+
+// Configuration type for presets (excludes runtime state)
+export type AudioPresetConfig = {
+  leftChannel: ChannelConfig;
+  rightChannel: ChannelConfig;
+  masterVolume: number;
+};
 
 export type AudioPreset = {
   name: string;
   description: string;
-  config: AudioProcessingState;
+  config: AudioPresetConfig;
 };
 
 export const AUDIO_PRESETS: AudioPreset[] = [
@@ -24,8 +31,6 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
       },
       masterVolume: 100,
-      isPlaying: false,
-      isLoading: false,
     },
   },
   {
@@ -45,8 +50,6 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
       },
       masterVolume: 100,
-      isPlaying: false,
-      isLoading: false,
     },
   },
   {
@@ -66,8 +69,6 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
       },
       masterVolume: 95,
-      isPlaying: false,
-      isLoading: false,
     },
   },
   {
@@ -87,8 +88,6 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         delay: { enabled: true, delayTime: "4n", feedback: 0.4, wet: 0.25 },
       },
       masterVolume: 105,
-      isPlaying: false,
-      isLoading: false,
     },
   },
   {
@@ -108,8 +107,6 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         delay: { enabled: true, delayTime: "2n", feedback: 0.3, wet: 0.2 },
       },
       masterVolume: 110,
-      isPlaying: false,
-      isLoading: false,
     },
   },
   {
@@ -129,8 +126,6 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
       },
       masterVolume: 100,
-      isPlaying: false,
-      isLoading: false,
     },
   },
 ];
