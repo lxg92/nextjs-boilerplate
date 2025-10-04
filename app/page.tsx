@@ -10,9 +10,8 @@ type VoicesResponse = {
 
 const DEFAULT_TEXTS = [
   "Hello, this is a test of the voice cloning system.",
-  "Welcome to our demonstration of text-to-speech technology.",
-  "This is a sample text to showcase the voice synthesis capabilities.",
-  "Thank you for using our voice cloning application today."
+  "Hello, this is a test of the voice cloning system. Welcome to our demonstration of text-to-speech technology. This is a sample text to showcase the voice synthesis capabilities. Thank you for using our voice cloning application today.",
+  "Large sums of money come to me easily and quickly, in increasing quantities, from multiple sources, on a continuous basis, in the best interest of all, that I get to keep",
 ];
 
 export default function Page() {
@@ -352,7 +351,7 @@ export default function Page() {
               <option value="">— Select default text —</option>
               {DEFAULT_TEXTS.map((text, index) => (
                 <option key={index} value={text}>
-                  {text.length > 50 ? text.substring(0, 50) + "..." : text}
+                  {text.length > 50 ? `(${text.length} characters) ` + text.substring(0, 50) + "..." : text}
                 </option>
               ))}
             </select>

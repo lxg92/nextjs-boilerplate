@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAudioProcessing } from "../hooks/useAudioProcessing";
 import AudioControls from "./AudioControls";
 import { AudioVisualizer } from "./AudioVisualizer";
+import { AUDIO_PRESETS, AudioPreset } from "../utils/audioPresets";
 
 interface AudioPlayerProps {
   audioUrl: string | null;
@@ -15,11 +16,15 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
     state,
     updateChannelConfig,
     updateMasterVolume,
+    applyPreset,
     setAudioSource,
     handlePlay,
     handleStop,
+    toggleLoop,
     isLoading,
   } = useAudioProcessing();
+
+  const [selectedPreset, setSelectedPreset] = useState<AudioPreset | null>(null);
 
   // Set audio source when audioUrl changes
   useEffect(() => {
@@ -72,6 +77,14 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
     });
   };
 
+  const handlePresetSelect = (presetName: string) => {
+    const preset = AUDIO_PRESETS.find(p => p.name === presetName);
+    if (preset) {
+      setSelectedPreset(preset);
+      applyPreset(preset.config);
+    }
+  };
+
   // Debug logging for state
   console.log("🚀 AudioPlayer Debug:", {
     isLoading,
@@ -89,6 +102,46 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
       {/* Audio Controls */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-800">
         <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Audio Playback & Channel Control</h3>
+        
+        {/* Audio Presets */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">
+            Audio Presets:
+          </label>
+          <select
+            value={selectedPreset?.name || ""}
+            onChange={(e) => handlePresetSelect(e.target.value)}
+            className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
+          >
+            <option value="">— Select a preset —</option>
+            {AUDIO_PRESETS.map((preset) => (
+              <option key={preset.name} value={preset.name}>
+                {preset.name} - {preset.description}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        {/* Loop Control */}
+        <div className="mb-4 flex items-center justify-center">
+          <button
+            onClick={toggleLoop}
+            className={`px-6 py-2 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors flex items-center gap-2 ${
+              state.loop
+                ? "bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800 text-white focus:ring-blue-500"
+                : "bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-800 text-white focus:ring-gray-500"
+            }`}
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              {state.loop ? (
+                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+              ) : (
+                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+              )}
+            </svg>
+            {state.loop ? "Loop Enabled" : "Loop Disabled"}
+          </button>
+      </div>
         
         <div className="flex items-center justify-center gap-4 mb-4">
           <button

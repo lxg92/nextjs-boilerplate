@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import * as Tone from "tone/build/esm/index.js";
+import { AudioPresetConfig } from "../utils/audioPresets";
 
 export interface ChannelConfig {
   volume: number; // 0-200%
@@ -26,6 +27,7 @@ export interface AudioProcessingState {
   isPlaying: boolean;
   isLoading: boolean;
   bufferLoaded: boolean;
+  loop: boolean;
 }
 
 const DEFAULT_CHANNEL_CONFIG: ChannelConfig = {
@@ -51,6 +53,7 @@ const DEFAULT_STATE: AudioProcessingState = {
   isPlaying: false,
   isLoading: false,
   bufferLoaded: false,
+  loop: false,
 };
 
 export const useAudioProcessing = () => {
@@ -93,8 +96,8 @@ export const useAudioProcessing = () => {
       // Create nodes
       const player = new Tone.Player(audioUrl);
       
-      // Configure player to not loop (play once and stop)
-      player.loop = false;
+      // Configure player loop based on state
+      player.loop = state.loop;
       const leftGain = new Tone.Gain();
       const rightGain = new Tone.Gain();
       const leftPan = new Tone.Panner();
@@ -227,6 +230,62 @@ export const useAudioProcessing = () => {
     }
   }, []);
 
+  // Toggle loop mode
+  const toggleLoop = useCallback(() => {
+    setState(prev => ({ ...prev, loop: !prev.loop }));
+    if (playerRef.current) {
+      playerRef.current.loop = !state.loop;
+    }
+  }, [state.loop]);
+
+  // Apply audio preset configuration
+  const applyPreset = useCallback((config: AudioPresetConfig) => {
+    setState(prev => ({
+      ...prev,
+      leftChannel: config.leftChannel,
+      rightChannel: config.rightChannel,
+      masterVolume: config.masterVolume,
+    }));
+
+    // Update audio parameters immediately
+    setTimeout(() => {
+      console.log("Applying preset configuration");
+      if (leftGainRef.current && rightGainRef.current && leftPanRef.current && 
+          rightPanRef.current && leftReverbRef.current && rightReverbRef.current &&
+          leftDelayRef.current && rightDelayRef.current) {
+        
+        // Update volumes
+        leftGainRef.current.gain.value = Tone.dbToGain(Tone.gainToDb(config.leftChannel.volume / 100));
+        rightGainRef.current.gain.value = Tone.dbToGain(Tone.gainToDb(config.rightChannel.volume / 100));
+
+        // Update panning
+        leftPanRef.current.pan.value = config.leftChannel.pan;
+        rightPanRef.current.pan.value = config.rightChannel.pan;
+
+        // Update reverb parameters
+        leftReverbRef.current.decay = config.leftChannel.reverb.roomSize;
+        leftReverbRef.current.wet.value = config.leftChannel.reverb.enabled ? config.leftChannel.reverb.wet : 0;
+        
+        rightReverbRef.current.decay = config.rightChannel.reverb.roomSize;
+        rightReverbRef.current.wet.value = config.rightChannel.reverb.enabled ? config.rightChannel.reverb.wet : 0;
+
+        // Update delay parameters
+        leftDelayRef.current.delayTime.value = config.leftChannel.delay.delayTime;
+        leftDelayRef.current.feedback.value = config.leftChannel.delay.feedback;
+        leftDelayRef.current.wet.value = config.leftChannel.delay.enabled ? config.leftChannel.delay.wet : 0;
+
+        rightDelayRef.current.delayTime.value = config.rightChannel.delay.delayTime;
+        rightDelayRef.current.feedback.value = config.rightChannel.delay.feedback;
+        rightDelayRef.current.wet.value = config.rightChannel.delay.enabled ? config.rightChannel.delay.wet : 0;
+      }
+
+      // Update master volume
+      if (masterGainRef.current) {
+        masterGainRef.current.gain.value = Tone.dbToGain(Tone.gainToDb(config.masterVolume / 100));
+      }
+    }, 0);
+  }, []);
+
 
   // Play audio
   const handlePlay = useCallback(async () => {
@@ -340,9 +399,11 @@ export const useAudioProcessing = () => {
     state,
     updateChannelConfig,
     updateMasterVolume,
+    applyPreset,
     setAudioSource,
     handlePlay,
     handleStop,
+    toggleLoop,
     isLoading: state.isLoading,
   };
 };
