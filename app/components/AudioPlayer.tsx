@@ -72,6 +72,14 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
     });
   };
 
+  // Debug logging for state
+  console.log("🚀 AudioPlayer Debug:", {
+    isLoading,
+    bufferLoaded: state.bufferLoaded,
+    isPlaying: state.isPlaying,
+    masterVolume: state.masterVolume
+  });
+
   if (!audioUrl) {
     return null;
   }

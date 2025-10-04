@@ -68,6 +68,7 @@ export const useAudioProcessing = () => {
   const leftDelayRef = useRef<Tone.PingPongDelay | null>(null);
   const rightDelayRef = useRef<Tone.PingPongDelay | null>(null);
   const masterGainRef = useRef<Tone.Gain | null>(null);
+  const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize Tone.js context
   const initializeTone = useCallback(async () => {
@@ -91,6 +92,9 @@ export const useAudioProcessing = () => {
     try {
       // Create nodes
       const player = new Tone.Player(audioUrl);
+      
+      // Configure player to not loop (play once and stop)
+      player.loop = false;
       const leftGain = new Tone.Gain();
       const rightGain = new Tone.Gain();
       const leftPan = new Tone.Panner();
@@ -130,6 +134,7 @@ export const useAudioProcessing = () => {
       leftDelay.chain(leftReverb, leftGain, leftPan, masterGain);
       rightDelay.chain(rightReverb, rightGain, rightPan, masterGain);
       masterGain.toDestination();
+
 
       // Store references
       playerRef.current = player;
@@ -229,9 +234,22 @@ export const useAudioProcessing = () => {
       await createAudioChain();
     }
     
-    if (playerRef.current && playerRef.current.loaded) {
+      if (playerRef.current && playerRef.current.loaded) {
+      const audioDuration = playerRef.current.buffer.duration;
+      console.log('Audio duration:', audioDuration);
+      
       playerRef.current.start();
       setState(prev => ({ ...prev, isPlaying: true }));
+      
+      // Set a timeout to automatically stop after audio duration
+      const playbackTimer = setTimeout(() => {
+        console.log('Audio playback timer fired - audio should be complete now');
+        console.log('Setting isPlaying to false');
+        setState(prev => ({ ...prev, isPlaying: false }));
+      }, Math.floor(audioDuration * 1000) + 100); // Convert to milliseconds + small buffer
+      
+      // Store the timer for cleanup if needed
+      playbackTimerRef.current = playbackTimer;
     } else {
       console.warn('Audio buffer not loaded yet. Please wait for loading to complete.');
     }
@@ -242,6 +260,12 @@ export const useAudioProcessing = () => {
     if (playerRef.current) {
       playerRef.current.stop();
       setState(prev => ({ ...prev, isPlaying: false }));
+      
+      // Clear the playback timer if it exists
+      if (playbackTimerRef.current) {
+        clearTimeout(playbackTimerRef.current);
+        playbackTimerRef.current = null;
+      }
     }
   }, []);
 
@@ -274,6 +298,12 @@ export const useAudioProcessing = () => {
     leftDelayRef.current = null;
     rightDelayRef.current = null;
     masterGainRef.current = null;
+    
+    // Clear any active playback timer
+    if (playbackTimerRef.current) {
+      clearTimeout(playbackTimerRef.current);
+      playbackTimerRef.current = null;
+    }
   }, []);
 
   // Set audio source
@@ -290,6 +320,16 @@ export const useAudioProcessing = () => {
     }
   }, [audioUrl, createAudioChain]);
 
+
+  // Debug useEffect to monitor state changes
+  useEffect(() => {
+    console.log('🎵 Audio state changed:', {
+      isPlaying: state.isPlaying,
+      isLoading: state.isLoading,
+      bufferLoaded: state.bufferLoaded,
+      masterVolume: state.masterVolume
+    });
+  }, [state.isPlaying, state.isLoading, state.bufferLoaded, state.masterVolume]);
 
   // Cleanup on unmount
   useEffect(() => {
