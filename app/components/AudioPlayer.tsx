@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useAudioProcessing } from "../hooks/useAudioProcessing";
 import AudioControls from "./AudioControls";
-import { AudioVisualizer } from "./AudioVisualizer";
 import { AUDIO_PRESETS, AudioPreset } from "../utils/audioPresets";
 
 interface AudioPlayerProps {
@@ -22,7 +21,6 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
     handleStop,
     toggleLoop,
     isLoading,
-    visualizerData,
   } = useAudioProcessing();
 
   const [selectedPreset, setSelectedPreset] = useState<AudioPreset | null>(null);
@@ -222,8 +220,7 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
         />
       </div>
 
-      {/* Audio Visualizer */}
-      <AudioVisualizer visualizerData={visualizerData} />
+      {/* Visualizer removed */}
     </div>
   );
 };
