@@ -30,6 +30,11 @@ export interface AudioProcessingState {
   loop: boolean;
 }
 
+export interface AudioVisualizerData {
+  analyser: AnalyserNode | null;
+  audioContext: AudioContext | null;
+}
+
 const DEFAULT_CHANNEL_CONFIG: ChannelConfig = {
   volume: 100,
   pan: 0,
@@ -72,12 +77,18 @@ export const useAudioProcessing = () => {
   const rightDelayRef = useRef<Tone.PingPongDelay | null>(null);
   const masterGainRef = useRef<Tone.Gain | null>(null);
   const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Visualizer nodes
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   // Initialize Tone.js context
   const initializeTone = useCallback(async () => {
     if (Tone.context.state !== "running") {
       await Tone.start();
     }
+    // Store reference to the underlying Web Audio context for visualizer
+    audioContextRef.current = Tone.context.rawContext as AudioContext;
   }, []);
 
   // Create audio processing chain
@@ -107,6 +118,11 @@ export const useAudioProcessing = () => {
       const leftDelay = new Tone.PingPongDelay();
       const rightDelay = new Tone.PingPongDelay();
       const masterGain = new Tone.Gain();
+      
+      // Create analyser for visualization
+      const analyser = audioContextRef.current!.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
 
       // Configure effects using constructor options
       leftReverb.decay = state.leftChannel.reverb.roomSize;
@@ -137,6 +153,9 @@ export const useAudioProcessing = () => {
       leftDelay.chain(leftReverb, leftGain, leftPan, masterGain);
       rightDelay.chain(rightReverb, rightGain, rightPan, masterGain);
       masterGain.toDestination();
+      
+      // Connect master gain to analyser for visualization
+      masterGain.connect(analyser);
 
 
       // Store references
@@ -150,6 +169,7 @@ export const useAudioProcessing = () => {
       leftDelayRef.current = leftDelay;
       rightDelayRef.current = rightDelay;
       masterGainRef.current = masterGain;
+      analyserRef.current = analyser;
 
       // Wait for the buffer to load before marking as ready
       if (player.loaded) {
@@ -347,6 +367,12 @@ export const useAudioProcessing = () => {
       }
     });
     
+    // Clean up analyser
+    if (analyserRef.current) {
+      analyserRef.current.disconnect();
+      analyserRef.current = null;
+    }
+    
     playerRef.current = null;
     leftGainRef.current = null;
     rightGainRef.current = null;
@@ -405,5 +431,9 @@ export const useAudioProcessing = () => {
     handleStop,
     toggleLoop,
     isLoading: state.isLoading,
+    visualizerData: {
+      analyser: analyserRef.current,
+      audioContext: audioContextRef.current,
+    },
   };
 };

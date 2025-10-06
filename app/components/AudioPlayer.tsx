@@ -22,6 +22,7 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
     handleStop,
     toggleLoop,
     isLoading,
+    visualizerData,
   } = useAudioProcessing();
 
   const [selectedPreset, setSelectedPreset] = useState<AudioPreset | null>(null);
@@ -222,7 +223,7 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
       </div>
 
       {/* Audio Visualizer */}
-      <AudioVisualizer audioUrl={audioUrl} />
+      <AudioVisualizer visualizerData={visualizerData} />
     </div>
   );
 };
