@@ -1,0 +1,511 @@
+# Kubernetes Cluster Configuration for Voice App
+
+## EKS Cluster Setup
+```yaml
+# eks-cluster.yaml
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: voice-app-cluster
+  region: us-east-1
+  version: "1.28"
+
+nodeGroups:
+  - name: general-purpose
+    instanceType: t3.medium
+    desiredCapacity: 3
+    minSize: 2
+    maxSize: 10
+    ssh:
+      allow: true
+    iam:
+      withAddonPolicies:
+        imageBuilder: true
+        autoScaler: true
+        externalDNS: true
+        certManager: true
+        appMesh: true
+        ebs: true
+        fsx: true
+        efs: true
+        awsLoadBalancerController: true
+
+  - name: compute-optimized
+    instanceType: c5.large
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 5
+    labels:
+      node-type: compute
+    taints:
+      - key: compute-workload
+        value: "true"
+        effect: NoSchedule
+
+managedNodeGroups:
+  - name: spot-instances
+    instanceType: t3.medium
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 5
+    spot: true
+    labels:
+      node-type: spot
+    taints:
+      - key: spot-instance
+        value: "true"
+        effect: NoSchedule
+
+addons:
+  - name: vpc-cni
+    version: latest
+  - name: coredns
+    version: latest
+  - name: kube-proxy
+    version: latest
+  - name: aws-ebs-csi-driver
+    version: latest
+```
+
+## Namespace Configuration
+```yaml
+# namespaces.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: voice-app-production
+  labels:
+    name: voice-app-production
+    environment: production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: voice-app-staging
+  labels:
+    name: voice-app-staging
+    environment: staging
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: voice-app-monitoring
+  labels:
+    name: voice-app-monitoring
+    environment: monitoring
+```
+
+## Secrets Configuration
+```yaml
+# secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: database-secret
+  namespace: voice-app-production
+type: Opaque
+data:
+  url: <base64-encoded-database-url>
+  host: <base64-encoded-host>
+  user: <base64-encoded-user>
+  password: <base64-encoded-password>
+  name: <base64-encoded-database-name>
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-secret
+  namespace: voice-app-production
+type: Opaque
+data:
+  url: <base64-encoded-redis-url>
+  password: <base64-encoded-redis-password>
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: auth0-secret
+  namespace: voice-app-production
+type: Opaque
+data:
+  domain: <base64-encoded-auth0-domain>
+  client-id: <base64-encoded-client-id>
+  client-secret: <base64-encoded-client-secret>
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: elevenlabs-secret
+  namespace: voice-app-production
+type: Opaque
+data:
+  api-key: <base64-encoded-api-key>
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: stripe-secret
+  namespace: voice-app-production
+type: Opaque
+data:
+  secret-key: <base64-encoded-secret-key>
+  publishable-key: <base64-encoded-publishable-key>
+  webhook-secret: <base64-encoded-webhook-secret>
+```
+
+## ConfigMap for Environment Variables
+```yaml
+# configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: voice-app-config
+  namespace: voice-app-production
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  API_VERSION: "v1"
+  CORS_ORIGIN: "https://yourdomain.com"
+  RATE_LIMIT_WINDOW_MS: "900000"
+  RATE_LIMIT_MAX_REQUESTS: "100"
+  JWT_EXPIRES_IN: "1h"
+  JWT_REFRESH_EXPIRES_IN: "7d"
+  SESSION_SECRET: "your-session-secret"
+  REDIS_TTL: "3600"
+  DATABASE_POOL_SIZE: "20"
+  DATABASE_TIMEOUT: "30000"
+```
+
+## Service Account and RBAC
+```yaml
+# rbac.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: voice-app-sa
+  namespace: voice-app-production
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: voice-app-production
+  name: voice-app-role
+rules:
+- apiGroups: [""]
+  resources: ["secrets", "configmaps"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: voice-app-rolebinding
+  namespace: voice-app-production
+subjects:
+- kind: ServiceAccount
+  name: voice-app-sa
+  namespace: voice-app-production
+roleRef:
+  kind: Role
+  name: voice-app-role
+  apiGroup: rbac.authorization.k8s.io
+```
+
+## Network Policies
+```yaml
+# network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: voice-app-network-policy
+  namespace: voice-app-production
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: voice-app-production
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 6379  # Redis
+    - protocol: TCP
+      port: 443   # HTTPS
+    - protocol: TCP
+      port: 80    # HTTP
+```
+
+## Persistent Volume Claims
+```yaml
+# pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: voice-app-production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: gp3
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: voice-app-production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: gp3
+```
+
+## Cluster Setup Script
+```bash
+#!/bin/bash
+# setup-cluster.sh
+
+set -e
+
+echo "Setting up Voice App Kubernetes Cluster..."
+
+# Check if eksctl is installed
+if ! command -v eksctl &> /dev/null; then
+    echo "eksctl is not installed. Please install it first."
+    exit 1
+fi
+
+# Check if kubectl is installed
+if ! command -v kubectl &> /dev/null; then
+    echo "kubectl is not installed. Please install it first."
+    exit 1
+fi
+
+# Create EKS cluster
+echo "Creating EKS cluster..."
+eksctl create cluster -f k8s/eks-cluster.yaml
+
+# Wait for cluster to be ready
+echo "Waiting for cluster to be ready..."
+kubectl wait --for=condition=Ready nodes --all --timeout=300s
+
+# Apply namespaces
+echo "Creating namespaces..."
+kubectl apply -f k8s/namespaces.yaml
+
+# Apply RBAC
+echo "Setting up RBAC..."
+kubectl apply -f k8s/rbac.yaml
+
+# Apply network policies
+echo "Setting up network policies..."
+kubectl apply -f k8s/network-policies.yaml
+
+# Apply persistent volume claims
+echo "Creating persistent volume claims..."
+kubectl apply -f k8s/pvc.yaml
+
+# Apply configmap
+echo "Creating configmap..."
+kubectl apply -f k8s/configmap.yaml
+
+# Create secrets (user needs to fill in values)
+echo "Creating secrets..."
+echo "Please update k8s/secrets.yaml with your actual values before applying:"
+echo "kubectl apply -f k8s/secrets.yaml"
+
+echo "Cluster setup complete!"
+echo "Next steps:"
+echo "1. Update k8s/secrets.yaml with your actual secret values"
+echo "2. Apply secrets: kubectl apply -f k8s/secrets.yaml"
+echo "3. Deploy PostgreSQL: kubectl apply -f k8s/postgresql.yaml"
+echo "4. Deploy Redis: kubectl apply -f k8s/redis.yaml"
+echo "5. Deploy applications: kubectl apply -f k8s/deployments/"
+```
+
+## Cluster Cleanup Script
+```bash
+#!/bin/bash
+# cleanup-cluster.sh
+
+set -e
+
+echo "Cleaning up Voice App Kubernetes Cluster..."
+
+# Delete applications
+echo "Deleting applications..."
+kubectl delete -f k8s/deployments/ --ignore-not-found=true
+
+# Delete databases
+echo "Deleting databases..."
+kubectl delete -f k8s/postgresql.yaml --ignore-not-found=true
+kubectl delete -f k8s/redis.yaml --ignore-not-found=true
+
+# Delete secrets
+echo "Deleting secrets..."
+kubectl delete -f k8s/secrets.yaml --ignore-not-found=true
+
+# Delete configmap
+echo "Deleting configmap..."
+kubectl delete -f k8s/configmap.yaml --ignore-not-found=true
+
+# Delete PVCs
+echo "Deleting persistent volume claims..."
+kubectl delete -f k8s/pvc.yaml --ignore-not-found=true
+
+# Delete network policies
+echo "Deleting network policies..."
+kubectl delete -f k8s/network-policies.yaml --ignore-not-found=true
+
+# Delete RBAC
+echo "Deleting RBAC..."
+kubectl delete -f k8s/rbac.yaml --ignore-not-found=true
+
+# Delete namespaces
+echo "Deleting namespaces..."
+kubectl delete -f k8s/namespaces.yaml --ignore-not-found=true
+
+# Delete EKS cluster
+echo "Deleting EKS cluster..."
+eksctl delete cluster --name voice-app-cluster --region us-east-1
+
+echo "Cluster cleanup complete!"
+```
+
+## Health Check Script
+```bash
+#!/bin/bash
+# health-check.sh
+
+set -e
+
+echo "Checking Voice App Cluster Health..."
+
+# Check cluster status
+echo "Checking cluster status..."
+kubectl cluster-info
+
+# Check node status
+echo "Checking node status..."
+kubectl get nodes
+
+# Check namespace status
+echo "Checking namespace status..."
+kubectl get namespaces | grep voice-app
+
+# Check pod status
+echo "Checking pod status..."
+kubectl get pods -n voice-app-production
+
+# Check service status
+echo "Checking service status..."
+kubectl get services -n voice-app-production
+
+# Check secret status
+echo "Checking secret status..."
+kubectl get secrets -n voice-app-production
+
+# Check configmap status
+echo "Checking configmap status..."
+kubectl get configmaps -n voice-app-production
+
+# Check PVC status
+echo "Checking PVC status..."
+kubectl get pvc -n voice-app-production
+
+echo "Health check complete!"
+```
+
+## Monitoring Setup
+```yaml
+# monitoring.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: voice-app-monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/proxy
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs: ["get", "list", "watch"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: voice-app-monitoring
+```
+
+## Instructions for Setup
+
+1. **Prerequisites**:
+   - Install `eksctl`: `curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp && sudo mv /tmp/eksctl /usr/local/bin`
+   - Install `kubectl`: `curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"`
+   - Install `aws-cli`: `pip install awscli`
+   - Configure AWS credentials: `aws configure`
+
+2. **Setup Cluster**:
+   ```bash
+   chmod +x k8s/setup-cluster.sh
+   ./k8s/setup-cluster.sh
+   ```
+
+3. **Update Secrets**:
+   - Edit `k8s/secrets.yaml` with your actual values
+   - Apply secrets: `kubectl apply -f k8s/secrets.yaml`
+
+4. **Verify Setup**:
+   ```bash
+   chmod +x k8s/health-check.sh
+   ./k8s/health-check.sh
+   ```
+
+This Kubernetes setup provides:
+- **High Availability**: Multi-node cluster with auto-scaling
+- **Security**: RBAC, network policies, and secret management
+- **Monitoring**: Prometheus setup for observability
+- **Storage**: Persistent volumes for databases
+- **Networking**: Proper network policies and service discovery
+
