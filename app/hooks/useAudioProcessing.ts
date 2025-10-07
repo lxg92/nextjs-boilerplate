@@ -28,6 +28,11 @@ export interface AudioProcessingState {
   isLoading: boolean;
   bufferLoaded: boolean;
   loop: boolean;
+  playbackProgress: {
+    currentTime: number;
+    duration: number;
+    progress: number;
+  };
 }
 
 // Visualizer removed
@@ -56,6 +61,11 @@ const DEFAULT_STATE: AudioProcessingState = {
   isLoading: false,
   bufferLoaded: false,
   loop: false,
+  playbackProgress: {
+    currentTime: 0,
+    duration: 0,
+    progress: 0,
+  },
 };
 
 export const useAudioProcessing = () => {
@@ -74,6 +84,9 @@ export const useAudioProcessing = () => {
   const rightDelayRef = useRef<Tone.PingPongDelay | null>(null);
   const masterGainRef = useRef<Tone.Gain | null>(null);
   const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const playbackStartTimeRef = useRef<number | null>(null);
+  const loopStateRef = useRef<boolean>(false);
   
   // Visualizer removed
 
@@ -83,6 +96,58 @@ export const useAudioProcessing = () => {
       await Tone.start();
     }
     // Visualizer removed
+  }, []);
+
+  // Update playback progress
+  const updatePlaybackProgress = useCallback(() => {
+    if (playerRef.current && playbackStartTimeRef.current !== null) {
+      try {
+        // Ensure Tone context is running
+        if (Tone.context.state !== "running") {
+          console.log("Tone context not running, skipping progress update");
+          return;
+        }
+        
+        const duration = playerRef.current.buffer.duration;
+        const totalElapsedTime = Tone.now() - playbackStartTimeRef.current;
+        
+        // Calculate current time within the current loop cycle
+        let currentTime;
+        let progress;
+        
+        if (loopStateRef.current && duration > 0) {
+          // For looping audio, calculate position within current loop cycle
+          currentTime = totalElapsedTime % duration;
+          progress = currentTime / duration;
+        } else {
+          // For non-looping audio, use total elapsed time
+          currentTime = totalElapsedTime;
+          progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
+        }
+        
+        console.log('Progress update:', { 
+          currentTime, 
+          duration, 
+          progress,
+          totalElapsedTime,
+          isLooping: loopStateRef.current,
+          toneNow: Tone.now(),
+          startTime: playbackStartTimeRef.current,
+          contextState: Tone.context.state
+        });
+        
+        setState(prev => ({
+          ...prev,
+          playbackProgress: {
+            currentTime: Math.max(0, currentTime),
+            duration,
+            progress,
+          }
+        }));
+      } catch (error) {
+        console.error('Error updating playback progress:', error);
+      }
+    }
   }, []);
 
   // Create audio processing chain
@@ -242,11 +307,34 @@ export const useAudioProcessing = () => {
 
   // Toggle loop mode
   const toggleLoop = useCallback(() => {
-    setState(prev => ({ ...prev, loop: !prev.loop }));
+    const newLoopState = !state.loop;
+    setState(prev => ({ ...prev, loop: newLoopState }));
+    loopStateRef.current = newLoopState;
+    
     if (playerRef.current) {
-      playerRef.current.loop = !state.loop;
+      playerRef.current.loop = newLoopState;
+      
+      // If we're currently playing and just enabled loop, clear any existing timer
+      if (state.isPlaying && newLoopState) {
+        if (playbackTimerRef.current) {
+          clearTimeout(playbackTimerRef.current);
+          playbackTimerRef.current = null;
+        }
+        console.log('Loop enabled while playing - cleared stop timer');
+      }
+      // If we're currently playing and just disabled loop, set a new timer
+      else if (state.isPlaying && !newLoopState) {
+        const audioDuration = playerRef.current.buffer.duration;
+        const playbackTimer = setTimeout(() => {
+          console.log('Audio playback timer fired after disabling loop');
+          setState(prev => ({ ...prev, isPlaying: false }));
+        }, Math.floor(audioDuration * 1000) + 100);
+        
+        playbackTimerRef.current = playbackTimer;
+        console.log('Loop disabled while playing - set new stop timer');
+      }
     }
-  }, [state.loop]);
+  }, [state.loop, state.isPlaying]);
 
   // Apply audio preset configuration
   const applyPreset = useCallback((config: AudioPresetConfig) => {
@@ -303,37 +391,89 @@ export const useAudioProcessing = () => {
       await createAudioChain();
     }
     
-      if (playerRef.current && playerRef.current.loaded) {
+    if (playerRef.current && playerRef.current.loaded) {
       const audioDuration = playerRef.current.buffer.duration;
       console.log('Audio duration:', audioDuration);
       
       playerRef.current.start();
-      setState(prev => ({ ...prev, isPlaying: true }));
+      playbackStartTimeRef.current = Tone.now();
+      loopStateRef.current = state.loop;
+      console.log('Playback started at:', playbackStartTimeRef.current);
+      console.log('Tone context state:', Tone.context.state);
+      console.log('Player loaded:', playerRef.current.loaded);
+      console.log('Loop state:', loopStateRef.current);
       
-      // Set a timeout to automatically stop after audio duration
-      const playbackTimer = setTimeout(() => {
-        console.log('Audio playback timer fired - audio should be complete now');
-        console.log('Setting isPlaying to false');
-        setState(prev => ({ ...prev, isPlaying: false }));
-      }, Math.floor(audioDuration * 1000) + 100); // Convert to milliseconds + small buffer
+      setState(prev => ({ 
+        ...prev, 
+        isPlaying: true,
+        playbackProgress: {
+          currentTime: 0,
+          duration: audioDuration,
+          progress: 0,
+        }
+      }));
       
-      // Store the timer for cleanup if needed
-      playbackTimerRef.current = playbackTimer;
+      // Start progress tracking timer
+      const progressTimer = setInterval(() => {
+        updatePlaybackProgress();
+      }, 100); // Update every 100ms
+      progressTimerRef.current = progressTimer;
+      console.log('Progress timer started');
+      
+      // Only set a timeout to stop if loop is disabled
+      if (!state.loop) {
+        const playbackTimer = setTimeout(() => {
+          console.log('Audio playback timer fired - audio should be complete now');
+          console.log('Setting isPlaying to false');
+          setState(prev => ({ ...prev, isPlaying: false }));
+          
+          // Clear progress timer
+          if (progressTimerRef.current) {
+            clearInterval(progressTimerRef.current);
+            progressTimerRef.current = null;
+          }
+        }, Math.floor(audioDuration * 1000) + 100); // Convert to milliseconds + small buffer
+        
+        // Store the timer for cleanup if needed
+        playbackTimerRef.current = playbackTimer;
+      } else {
+        console.log('Loop enabled - no automatic stop timer set');
+        // Clear any existing timer since we're looping
+        if (playbackTimerRef.current) {
+          clearTimeout(playbackTimerRef.current);
+          playbackTimerRef.current = null;
+        }
+      }
     } else {
       console.warn('Audio buffer not loaded yet. Please wait for loading to complete.');
     }
-  }, [createAudioChain]);
+  }, [createAudioChain, state.loop]);
 
   // Stop audio
   const handleStop = useCallback(() => {
     if (playerRef.current) {
       playerRef.current.stop();
-      setState(prev => ({ ...prev, isPlaying: false }));
+      playbackStartTimeRef.current = null;
+      setState(prev => ({ 
+        ...prev, 
+        isPlaying: false,
+        playbackProgress: {
+          currentTime: 0,
+          duration: prev.playbackProgress.duration,
+          progress: 0,
+        }
+      }));
       
       // Clear the playback timer if it exists
       if (playbackTimerRef.current) {
         clearTimeout(playbackTimerRef.current);
         playbackTimerRef.current = null;
+      }
+      
+      // Clear the progress timer if it exists
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
       }
     }
   }, []);
@@ -375,6 +515,16 @@ export const useAudioProcessing = () => {
       clearTimeout(playbackTimerRef.current);
       playbackTimerRef.current = null;
     }
+    
+    // Clear any active progress timer
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+    
+    // Reset playback start time and loop state
+    playbackStartTimeRef.current = null;
+    loopStateRef.current = false;
   }, []);
 
   // Set audio source
