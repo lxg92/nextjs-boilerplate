@@ -129,7 +129,3 @@ export const AUDIO_PRESETS: AudioPreset[] = [
     },
   },
 ];
-
-export const getPresetByName = (name: string): AudioPreset | null => {
-  return AUDIO_PRESETS.find(preset => preset.name === name) || null;
-};

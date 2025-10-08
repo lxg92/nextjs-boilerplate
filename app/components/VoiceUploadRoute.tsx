@@ -1,39 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useVoiceManagement } from "../hooks/useVoiceManagement";
 
 interface VoiceUploadRouteProps {
   onUploadSuccess?: (voiceId: string) => void;
 }
 
 export const VoiceUploadRoute = ({ onUploadSuccess }: VoiceUploadRouteProps) => {
-  const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [voiceName, setVoiceName] = useState("My IVC");
 
-  const createIvcmutation = useMutation({
-    mutationFn: async ({ file, name }: { file: File; name: string }) => {
-      const fd = new FormData();
-      fd.set("name", name);
-      fd.set("file", file, file.name);
-      const r = await fetch("/api/ivc", { method: "POST", body: fd });
-      if (!r.ok) throw new Error(await r.text());
-      return r.json() as Promise<{ voice_id: string }>;
-    },
-    onSuccess: async (payload) => {
-      const newId = (payload as any).voice_id;
-      // Refresh cached voices, then notify parent
-      await queryClient.invalidateQueries({ queryKey: ["voices"] });
-      onUploadSuccess?.(newId);
-      
-      // Reset form
-      setFile(null);
-      setVoiceName("My IVC");
-    },
-  });
+  const { createVoiceMutation } = useVoiceManagement();
 
-  const canCreate = !!file && !createIvcmutation.isPending;
+  const canCreate = !!file && !createVoiceMutation.isPending;
+
+  const handleCreateVoice = () => {
+    if (file) {
+      createVoiceMutation.mutate(
+        { file, name: voiceName },
+        {
+          onSuccess: (payload) => {
+            const newId = payload.voice_id;
+            onUploadSuccess?.(newId);
+            
+            // Reset form
+            setFile(null);
+            setVoiceName("My IVC");
+          }
+        }
+      );
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -59,7 +57,7 @@ export const VoiceUploadRoute = ({ onUploadSuccess }: VoiceUploadRouteProps) => 
             <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
               <input
                 type="file"
-                accept="audio/*"
+                accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/ogg,audio/flac"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 className="hidden"
                 id="file-upload"
@@ -111,9 +109,9 @@ export const VoiceUploadRoute = ({ onUploadSuccess }: VoiceUploadRouteProps) => 
             <button
               className="w-full px-6 py-3 rounded-lg bg-blue-600 dark:bg-blue-700 text-white font-semibold hover:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
               disabled={!canCreate}
-              onClick={() => file && createIvcmutation.mutate({ file, name: voiceName })}
+              onClick={handleCreateVoice}
             >
-              {createIvcmutation.isPending ? (
+              {createVoiceMutation.isPending ? (
                 <div className="flex items-center justify-center">
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                   Creating Voice Clone...
@@ -124,16 +122,16 @@ export const VoiceUploadRoute = ({ onUploadSuccess }: VoiceUploadRouteProps) => 
             </button>
             
             {/* Error Message */}
-            {createIvcmutation.isError && (
+            {createVoiceMutation.isError && (
               <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                 <p className="text-red-600 dark:text-red-400 text-sm font-medium">
-                  {(createIvcmutation.error as Error).message}
+                  {(createVoiceMutation.error as Error).message}
                 </p>
               </div>
             )}
 
             {/* Success Message */}
-            {createIvcmutation.isSuccess && (
+            {createVoiceMutation.isSuccess && (
               <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                 <p className="text-green-600 dark:text-green-400 text-sm font-medium">
                   ✅ Voice clone created successfully! You can now use it to generate speech.

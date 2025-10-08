@@ -1,12 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useVoiceManagement } from "../hooks/useVoiceManagement";
+import { useTTSGeneration } from "../hooks/useTTSGeneration";
 import { AudioPlayer } from "./AudioPlayer";
-
-type VoicesResponse = {
-  voices: Array<{ voice_id: string; name: string; category?: string }>;
-};
 
 const DEFAULT_TEXTS = [
   "Hello, this is a test of the voice cloning system.",
@@ -23,81 +20,44 @@ export const VoiceSelectionRoute = ({
   selectedVoiceId: initialSelectedVoiceId, 
   onVoiceSelect 
 }: VoiceSelectionRouteProps) => {
-  const queryClient = useQueryClient();
-  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(initialSelectedVoiceId || null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [customText, setCustomText] = useState("");
-  const [selectedDefaultText, setSelectedDefaultText] = useState("");
-  const [speechSpeed, setSpeechSpeed] = useState(1.0);
+  // Use the voice management hook
+  const {
+    voices,
+    voicesLoading,
+    selectedVoiceId,
+    setSelectedVoiceId,
+    selectedVoice,
+    deleteVoiceMutation
+  } = useVoiceManagement();
 
-  // Fetch voices
-  const { data: voicesData, isLoading: voicesLoading } = useQuery<VoicesResponse>({
-    queryKey: ["voices"],
-    queryFn: async () => {
-      const r = await fetch("/api/voices", { cache: "no-store" });
-      if (!r.ok) throw new Error("Failed to fetch voices");
-      return r.json();
-    },
-    staleTime: 0,
-  });
+  // Use the TTS generation hook
+  const {
+    audioUrl,
+    customText,
+    selectedDefaultText,
+    speechSpeed,
+    setCustomText,
+    setSelectedDefaultText,
+    setSpeechSpeed,
+    ttsMutation,
+    canGenerateSpeech,
+    handleDefaultTextChange,
+    handleCustomTextChange
+  } = useTTSGeneration();
 
-  const voices = voicesData?.voices ?? [];
-  const selectedVoice = useMemo(
-    () => voices.find((v) => v.voice_id === selectedVoiceId) ?? null,
-    [voices, selectedVoiceId]
-  );
-
-  // Delete voice mutation
-  const deleteVoiceMutation = useMutation({
-    mutationFn: async (voiceId: string) => {
-      const r = await fetch("/api/voices/delete", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voiceId }),
-      });
-      if (!r.ok) throw new Error(await r.text());
-      return r.json();
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["voices"] });
-      if (selectedVoiceId === selectedVoiceId) {
-        setSelectedVoiceId(null);
-      }
-    },
-  });
-
-  // TTS generation mutation
-  const ttsMutation = useMutation({
-    mutationFn: async ({ voiceId, text }: { voiceId: string; text: string }) => {
-      let processedText = text
-        .replace(/---/g, '<break time="3s"/>')
-        .replace(/--/g, '<break time="1s"/>')
-        .replace(/(?<!-)-(?!-)/g, '<break time="0.5s"/>');
-      
-      console.log('Original text:', text);
-      console.log('Processed SSML:', processedText);
-      
-      const r = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voiceId, text: processedText, speed: speechSpeed }),
-      });
-      if (!r.ok) throw new Error(await r.text());
-      const blob = await r.blob();
-      return URL.createObjectURL(blob);
-    },
-    onSuccess: (url) => {
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-      setAudioUrl(url);
-    },
-  });
+  // Initialize selected voice if provided
+  useEffect(() => {
+    if (initialSelectedVoiceId && initialSelectedVoiceId !== selectedVoiceId) {
+      setSelectedVoiceId(initialSelectedVoiceId);
+    }
+  }, [initialSelectedVoiceId, selectedVoiceId, setSelectedVoiceId]);
 
   const handleVoiceSelect = (voiceId: string) => {
     setSelectedVoiceId(voiceId);
     onVoiceSelect?.(voiceId);
   };
 
-  const canSpeak = !!selectedVoiceId && !ttsMutation.isPending;
+  const canSpeak = canGenerateSpeech(selectedVoiceId, ttsMutation.isPending);
 
   return (
     <div className="space-y-6">
@@ -220,12 +180,7 @@ export const VoiceSelectionRoute = ({
                 <select
                   className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-3 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
                   value={selectedDefaultText}
-                  onChange={(e) => {
-                    setSelectedDefaultText(e.target.value);
-                    if (e.target.value) {
-                      setCustomText(e.target.value);
-                    }
-                  }}
+                  onChange={(e) => handleDefaultTextChange(e.target.value)}
                 >
                   <option value="">— Select default text —</option>
                   {DEFAULT_TEXTS.map((text, index) => (
@@ -244,12 +199,7 @@ export const VoiceSelectionRoute = ({
                   className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-3 rounded-lg h-32 resize-none focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
                   placeholder="Enter your text here... Use -, --, --- for pauses."
                   value={customText}
-                  onChange={(e) => {
-                    setCustomText(e.target.value);
-                    if (e.target.value !== selectedDefaultText) {
-                      setSelectedDefaultText("");
-                    }
-                  }}
+                  onChange={(e) => handleCustomTextChange(e.target.value)}
                   maxLength={2500}
                 />
                 <div className="mt-2 flex justify-between items-center">
@@ -302,7 +252,7 @@ export const VoiceSelectionRoute = ({
                 onClick={() =>
                   selectedVoiceId &&
                   customText.trim() &&
-                  ttsMutation.mutate({ voiceId: selectedVoiceId, text: customText })
+                  ttsMutation.mutate({ voiceId: selectedVoiceId, text: customText, speed: speechSpeed })
                 }
               >
                 {ttsMutation.isPending ? (
