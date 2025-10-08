@@ -18,6 +18,11 @@ export interface ChannelConfig {
     feedback: number; // 0-0.9
     wet: number; // 0-1
   };
+  frequency: {
+    enabled: boolean;
+    frequency: number; // Hz
+    wet: number; // 0-1
+  };
 }
 
 export interface AudioProcessingState {
@@ -51,6 +56,11 @@ const DEFAULT_CHANNEL_CONFIG: ChannelConfig = {
     feedback: 0.3,
     wet: 0.3,
   },
+  frequency: {
+    enabled: false,
+    frequency: 500, // Middle of 100-1000Hz range
+    wet: 0.5,
+  },
 };
 
 const DEFAULT_STATE: AudioProcessingState = {
@@ -82,6 +92,10 @@ export const useAudioProcessing = () => {
   const rightReverbRef = useRef<Tone.Reverb | null>(null);
   const leftDelayRef = useRef<Tone.PingPongDelay | null>(null);
   const rightDelayRef = useRef<Tone.PingPongDelay | null>(null);
+  const leftOscillatorRef = useRef<Tone.Oscillator | null>(null);
+  const rightOscillatorRef = useRef<Tone.Oscillator | null>(null);
+  const leftOscGainRef = useRef<Tone.Gain | null>(null);
+  const rightOscGainRef = useRef<Tone.Gain | null>(null);
   const masterGainRef = useRef<Tone.Gain | null>(null);
   const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -89,6 +103,41 @@ export const useAudioProcessing = () => {
   const loopStateRef = useRef<boolean>(false);
   
   // Visualizer removed
+
+  // Helper function to restart oscillators when frequency changes
+  const restartOscillators = useCallback(() => {
+    if (leftOscillatorRef.current && rightOscillatorRef.current) {
+      console.log('Restarting oscillators...');
+      
+      // Stop both oscillators
+      try {
+        leftOscillatorRef.current.stop();
+        rightOscillatorRef.current.stop();
+      } catch (error) {
+        console.log('Error stopping oscillators:', error);
+      }
+      
+      // Start them again if enabled - use a small delay to ensure they're stopped
+      setTimeout(() => {
+        if (state.leftChannel.frequency.enabled) {
+          try {
+            leftOscillatorRef.current?.start();
+            console.log('Left oscillator restarted at', state.leftChannel.frequency.frequency, 'Hz');
+          } catch (error) {
+            console.log('Error starting left oscillator:', error);
+          }
+        }
+        if (state.rightChannel.frequency.enabled) {
+          try {
+            rightOscillatorRef.current?.start();
+            console.log('Right oscillator restarted at', state.rightChannel.frequency.frequency, 'Hz');
+          } catch (error) {
+            console.log('Error starting right oscillator:', error);
+          }
+        }
+      }, 50);
+    }
+  }, [state.leftChannel.frequency.enabled, state.rightChannel.frequency.enabled]);
 
   // Initialize Tone.js context
   const initializeTone = useCallback(async () => {
@@ -104,7 +153,6 @@ export const useAudioProcessing = () => {
       try {
         // Ensure Tone context is running
         if (Tone.context.state !== "running") {
-          console.log("Tone context not running, skipping progress update");
           return;
         }
         
@@ -125,16 +173,7 @@ export const useAudioProcessing = () => {
           progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
         }
         
-        console.log('Progress update:', { 
-          currentTime, 
-          duration, 
-          progress,
-          totalElapsedTime,
-          isLooping: loopStateRef.current,
-          toneNow: Tone.now(),
-          startTime: playbackStartTimeRef.current,
-          contextState: Tone.context.state
-        });
+
         
         setState(prev => ({
           ...prev,
@@ -177,6 +216,17 @@ export const useAudioProcessing = () => {
       const rightReverb = new Tone.Reverb();
       const leftDelay = new Tone.PingPongDelay();
       const rightDelay = new Tone.PingPongDelay();
+      const leftOscillator = new Tone.Oscillator(state.leftChannel.frequency.frequency, "sine");
+      const rightOscillator = new Tone.Oscillator(state.rightChannel.frequency.frequency, "sine");
+      const leftOscGain = new Tone.Gain();
+      const rightOscGain = new Tone.Gain();
+      
+      console.log('Creating oscillators:', {
+        leftFreq: state.leftChannel.frequency.frequency,
+        rightFreq: state.rightChannel.frequency.frequency,
+        leftEnabled: state.leftChannel.frequency.enabled,
+        rightEnabled: state.rightChannel.frequency.enabled
+      });
       const masterGain = new Tone.Gain();
       
       // Visualizer removed
@@ -196,6 +246,22 @@ export const useAudioProcessing = () => {
       rightDelay.feedback.value = state.rightChannel.delay.feedback;
       rightDelay.wet.value = state.rightChannel.delay.enabled ? state.rightChannel.delay.wet : 0;
 
+      // Configure oscillators
+      leftOscillator.frequency.value = state.leftChannel.frequency.frequency;
+      leftOscGain.gain.value = state.leftChannel.frequency.enabled ? state.leftChannel.frequency.wet : 0;
+      
+      rightOscillator.frequency.value = state.rightChannel.frequency.frequency;
+      rightOscGain.gain.value = state.rightChannel.frequency.enabled ? state.rightChannel.frequency.wet : 0;
+      
+      console.log('Oscillator configuration:', {
+        leftFreq: leftOscillator.frequency.value,
+        rightFreq: rightOscillator.frequency.value,
+        leftGain: leftOscGain.gain.value,
+        rightGain: rightOscGain.gain.value,
+        leftEnabled: state.leftChannel.frequency.enabled,
+        rightEnabled: state.rightChannel.frequency.enabled
+      });
+
       // Configure panning
       leftPan.pan.value = state.leftChannel.pan;
       rightPan.pan.value = state.rightChannel.pan;
@@ -209,6 +275,16 @@ export const useAudioProcessing = () => {
       player.fan(leftDelay, rightDelay);
       leftDelay.chain(leftReverb, leftGain, leftPan, masterGain);
       rightDelay.chain(rightReverb, rightGain, rightPan, masterGain);
+      
+      // Connect oscillators directly to master gain (they have their own pan control)
+      leftOscillator.chain(leftOscGain, masterGain);
+      rightOscillator.chain(rightOscGain, masterGain);
+      
+      console.log('Audio chain connected:', {
+        leftOscGainValue: leftOscGain.gain.value,
+        rightOscGainValue: rightOscGain.gain.value
+      });
+      
       masterGain.toDestination();
       
       // Visualizer removed
@@ -224,7 +300,29 @@ export const useAudioProcessing = () => {
       rightReverbRef.current = rightReverb;
       leftDelayRef.current = leftDelay;
       rightDelayRef.current = rightDelay;
+      leftOscillatorRef.current = leftOscillator;
+      rightOscillatorRef.current = rightOscillator;
+      leftOscGainRef.current = leftOscGain;
+      rightOscGainRef.current = rightOscGain;
       masterGainRef.current = masterGain;
+      
+      // Start oscillators immediately if they're enabled
+      if (state.leftChannel.frequency.enabled) {
+        try {
+          leftOscillator.start();
+          console.log('Left oscillator started immediately at', state.leftChannel.frequency.frequency, 'Hz');
+        } catch (error) {
+          console.log('Error starting left oscillator immediately:', error);
+        }
+      }
+      if (state.rightChannel.frequency.enabled) {
+        try {
+          rightOscillator.start();
+          console.log('Right oscillator started immediately at', state.rightChannel.frequency.frequency, 'Hz');
+        } catch (error) {
+          console.log('Error starting right oscillator immediately:', error);
+        }
+      }
       // Visualizer removed
 
       // Wait for the buffer to load before marking as ready
@@ -263,10 +361,10 @@ export const useAudioProcessing = () => {
       
       // Update audio parameters immediately with new state
       setTimeout(() => {
-        console.log("Updating audio parameters");
         if (leftGainRef.current && rightGainRef.current && leftPanRef.current && 
             rightPanRef.current && leftReverbRef.current && rightReverbRef.current &&
-            leftDelayRef.current && rightDelayRef.current) {
+            leftDelayRef.current && rightDelayRef.current && leftOscillatorRef.current &&
+            rightOscillatorRef.current && leftOscGainRef.current && rightOscGainRef.current) {
           
           // Update volumes
           leftGainRef.current.gain.value = Tone.dbToGain(Tone.gainToDb(newState.leftChannel.volume / 100));
@@ -291,6 +389,53 @@ export const useAudioProcessing = () => {
           rightDelayRef.current.delayTime.value = newState.rightChannel.delay.delayTime;
           rightDelayRef.current.feedback.value = newState.rightChannel.delay.feedback;
           rightDelayRef.current.wet.value = newState.rightChannel.delay.enabled ? newState.rightChannel.delay.wet : 0;
+
+          // Check if frequency values changed
+          const leftFreqChanged = leftOscillatorRef.current.frequency.value !== newState.leftChannel.frequency.frequency;
+          const rightFreqChanged = rightOscillatorRef.current.frequency.value !== newState.rightChannel.frequency.frequency;
+          const leftEnabledChanged = (leftOscGainRef.current.gain.value > 0) !== newState.leftChannel.frequency.enabled;
+          const rightEnabledChanged = (rightOscGainRef.current.gain.value > 0) !== newState.rightChannel.frequency.enabled;
+
+          // Update frequency parameters
+          leftOscillatorRef.current.frequency.value = newState.leftChannel.frequency.frequency;
+          leftOscGainRef.current.gain.value = newState.leftChannel.frequency.enabled ? newState.leftChannel.frequency.wet : 0;
+          
+          rightOscillatorRef.current.frequency.value = newState.rightChannel.frequency.frequency;
+          rightOscGainRef.current.gain.value = newState.rightChannel.frequency.enabled ? newState.rightChannel.frequency.wet : 0;
+
+          // Restart oscillators if frequency or enabled state changed
+          if (leftFreqChanged || leftEnabledChanged || rightFreqChanged || rightEnabledChanged) {
+            console.log('Frequency parameters changed, restarting oscillators:', {
+              leftFreqChanged,
+              rightFreqChanged,
+              leftEnabledChanged,
+              rightEnabledChanged,
+              newLeftFreq: newState.leftChannel.frequency.frequency,
+              newRightFreq: newState.rightChannel.frequency.frequency,
+              newLeftEnabled: newState.leftChannel.frequency.enabled,
+              newRightEnabled: newState.rightChannel.frequency.enabled
+            });
+            restartOscillators();
+          } else if (newState.leftChannel.frequency.enabled || newState.rightChannel.frequency.enabled) {
+            // If oscillators are enabled but no restart was triggered, start them
+            console.log('Starting oscillators for enabled frequency...');
+            if (newState.leftChannel.frequency.enabled && leftOscillatorRef.current) {
+              try {
+                leftOscillatorRef.current.start();
+                console.log('Left oscillator started at', newState.leftChannel.frequency.frequency, 'Hz');
+              } catch (error) {
+                console.log('Error starting left oscillator:', error);
+              }
+            }
+            if (newState.rightChannel.frequency.enabled && rightOscillatorRef.current) {
+              try {
+                rightOscillatorRef.current.start();
+                console.log('Right oscillator started at', newState.rightChannel.frequency.frequency, 'Hz');
+              } catch (error) {
+                console.log('Error starting right oscillator:', error);
+              }
+            }
+          }
         }
       }, 0);
       
@@ -321,18 +466,15 @@ export const useAudioProcessing = () => {
           clearTimeout(playbackTimerRef.current);
           playbackTimerRef.current = null;
         }
-        console.log('Loop enabled while playing - cleared stop timer');
       }
       // If we're currently playing and just disabled loop, set a new timer
       else if (state.isPlaying && !newLoopState) {
         const audioDuration = playerRef.current.buffer.duration;
         const playbackTimer = setTimeout(() => {
-          console.log('Audio playback timer fired after disabling loop');
           setState(prev => ({ ...prev, isPlaying: false }));
         }, Math.floor(audioDuration * 1000) + 100);
         
         playbackTimerRef.current = playbackTimer;
-        console.log('Loop disabled while playing - set new stop timer');
       }
     }
   }, [state.loop, state.isPlaying]);
@@ -348,10 +490,10 @@ export const useAudioProcessing = () => {
 
     // Update audio parameters immediately
     setTimeout(() => {
-      console.log("Applying preset configuration");
       if (leftGainRef.current && rightGainRef.current && leftPanRef.current && 
           rightPanRef.current && leftReverbRef.current && rightReverbRef.current &&
-          leftDelayRef.current && rightDelayRef.current) {
+          leftDelayRef.current && rightDelayRef.current && leftOscillatorRef.current &&
+          rightOscillatorRef.current && leftOscGainRef.current && rightOscGainRef.current) {
         
         // Update volumes
         leftGainRef.current.gain.value = Tone.dbToGain(Tone.gainToDb(config.leftChannel.volume / 100));
@@ -376,6 +518,16 @@ export const useAudioProcessing = () => {
         rightDelayRef.current.delayTime.value = config.rightChannel.delay.delayTime;
         rightDelayRef.current.feedback.value = config.rightChannel.delay.feedback;
         rightDelayRef.current.wet.value = config.rightChannel.delay.enabled ? config.rightChannel.delay.wet : 0;
+
+        // Update frequency parameters
+        leftOscillatorRef.current.frequency.value = config.leftChannel.frequency.frequency;
+        leftOscGainRef.current.gain.value = config.leftChannel.frequency.enabled ? config.leftChannel.frequency.wet : 0;
+        
+        rightOscillatorRef.current.frequency.value = config.rightChannel.frequency.frequency;
+        rightOscGainRef.current.gain.value = config.rightChannel.frequency.enabled ? config.rightChannel.frequency.wet : 0;
+
+        // Restart oscillators when applying preset
+        restartOscillators();
       }
 
       // Update master volume
@@ -394,15 +546,40 @@ export const useAudioProcessing = () => {
     
     if (playerRef.current && playerRef.current.loaded) {
       const audioDuration = playerRef.current.buffer.duration;
-      console.log('Audio duration:', audioDuration);
+
       
       playerRef.current.start();
+      
+      // Start oscillators if enabled
+      console.log('Attempting to start oscillators:', {
+        leftExists: !!leftOscillatorRef.current,
+        rightExists: !!rightOscillatorRef.current,
+        leftEnabled: state.leftChannel.frequency.enabled,
+        rightEnabled: state.rightChannel.frequency.enabled,
+        leftGain: leftOscGainRef.current?.gain.value,
+        rightGain: rightOscGainRef.current?.gain.value
+      });
+      
+      if (leftOscillatorRef.current && state.leftChannel.frequency.enabled) {
+        try {
+          leftOscillatorRef.current.start();
+          console.log('Left oscillator started at', state.leftChannel.frequency.frequency, 'Hz');
+        } catch (error) {
+          console.log('Error starting left oscillator:', error);
+        }
+      }
+      if (rightOscillatorRef.current && state.rightChannel.frequency.enabled) {
+        try {
+          rightOscillatorRef.current.start();
+          console.log('Right oscillator started at', state.rightChannel.frequency.frequency, 'Hz');
+        } catch (error) {
+          console.log('Error starting right oscillator:', error);
+        }
+      }
+      
       playbackStartTimeRef.current = Tone.now();
       loopStateRef.current = state.loop;
-      console.log('Playback started at:', playbackStartTimeRef.current);
-      console.log('Tone context state:', Tone.context.state);
-      console.log('Player loaded:', playerRef.current.loaded);
-      console.log('Loop state:', loopStateRef.current);
+
       
       setState(prev => ({ 
         ...prev, 
@@ -419,13 +596,12 @@ export const useAudioProcessing = () => {
         updatePlaybackProgress();
       }, 100); // Update every 100ms
       progressTimerRef.current = progressTimer;
-      console.log('Progress timer started');
+
       
       // Only set a timeout to stop if loop is disabled
       if (!state.loop) {
         const playbackTimer = setTimeout(() => {
-          console.log('Audio playback timer fired - audio should be complete now');
-          console.log('Setting isPlaying to false');
+
           setState(prev => ({ ...prev, isPlaying: false }));
           
           // Clear progress timer
@@ -438,7 +614,7 @@ export const useAudioProcessing = () => {
         // Store the timer for cleanup if needed
         playbackTimerRef.current = playbackTimer;
       } else {
-        console.log('Loop enabled - no automatic stop timer set');
+
         // Clear any existing timer since we're looping
         if (playbackTimerRef.current) {
           clearTimeout(playbackTimerRef.current);
@@ -454,6 +630,15 @@ export const useAudioProcessing = () => {
   const handleStop = useCallback(() => {
     if (playerRef.current) {
       playerRef.current.stop();
+      
+      // Stop oscillators
+      if (leftOscillatorRef.current) {
+        leftOscillatorRef.current.stop();
+      }
+      if (rightOscillatorRef.current) {
+        rightOscillatorRef.current.stop();
+      }
+      
       playbackStartTimeRef.current = null;
       setState(prev => ({ 
         ...prev, 
@@ -491,6 +676,10 @@ export const useAudioProcessing = () => {
       rightReverbRef.current,
       leftDelayRef.current,
       rightDelayRef.current,
+      leftOscillatorRef.current,
+      rightOscillatorRef.current,
+      leftOscGainRef.current,
+      rightOscGainRef.current,
       masterGainRef.current,
     ].forEach(node => {
       if (node) {
@@ -509,6 +698,10 @@ export const useAudioProcessing = () => {
     rightReverbRef.current = null;
     leftDelayRef.current = null;
     rightDelayRef.current = null;
+    leftOscillatorRef.current = null;
+    rightOscillatorRef.current = null;
+    leftOscGainRef.current = null;
+    rightOscGainRef.current = null;
     masterGainRef.current = null;
     
     // Clear any active playback timer
@@ -549,14 +742,108 @@ export const useAudioProcessing = () => {
       isPlaying: state.isPlaying,
       isLoading: state.isLoading,
       bufferLoaded: state.bufferLoaded,
-      masterVolume: state.masterVolume
+      masterVolume: state.masterVolume,
+      leftFreqEnabled: state.leftChannel.frequency.enabled,
+      rightFreqEnabled: state.rightChannel.frequency.enabled
     });
-  }, [state.isPlaying, state.isLoading, state.bufferLoaded, state.masterVolume]);
+  }, [state.isPlaying, state.isLoading, state.bufferLoaded, state.masterVolume, state.leftChannel.frequency.enabled, state.rightChannel.frequency.enabled]);
+
+  // Test oscillators on mount
+  useEffect(() => {
+    const testOscillators = async () => {
+      try {
+        // Ensure Tone context is running
+        if (Tone.context.state !== "running") {
+          await Tone.start();
+        }
+        
+        // Create test oscillators directly
+        const testLeftOsc = new Tone.Oscillator(440, "sine");
+        const testRightOsc = new Tone.Oscillator(450, "sine");
+        const testGain = new Tone.Gain(0.1);
+        
+        testLeftOsc.chain(testGain, Tone.Destination);
+        testRightOsc.chain(testGain, Tone.Destination);
+        
+        console.log('Testing direct oscillators...');
+        testLeftOsc.start();
+        testRightOsc.start();
+        
+        // Stop after 2 seconds
+        setTimeout(() => {
+          testLeftOsc.stop();
+          testRightOsc.stop();
+          testLeftOsc.dispose();
+          testRightOsc.dispose();
+          testGain.dispose();
+          console.log('Test oscillators stopped and disposed');
+        }, 2000);
+        
+      } catch (error) {
+        console.log('Error in test oscillators:', error);
+      }
+    };
+    
+    // Test after a short delay to ensure everything is initialized
+    const timer = setTimeout(testOscillators, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return cleanup;
   }, [cleanup]);
+
+  // Test function for oscillators
+  const testOscillators = useCallback(async () => {
+    try {
+      // Ensure Tone context is running
+      if (Tone.context.state !== "running") {
+        await Tone.start();
+      }
+      
+      // Create test oscillators directly
+      const testLeftOsc = new Tone.Oscillator(440, "sine");
+      const testRightOsc = new Tone.Oscillator(450, "sine");
+      const testGain = new Tone.Gain(0.1);
+      
+      testLeftOsc.chain(testGain, Tone.Destination);
+      testRightOsc.chain(testGain, Tone.Destination);
+      
+      console.log('Manual test oscillators started...');
+      testLeftOsc.start();
+      testRightOsc.start();
+      
+      // Stop after 3 seconds
+      setTimeout(() => {
+        testLeftOsc.stop();
+        testRightOsc.stop();
+        testLeftOsc.dispose();
+        testRightOsc.dispose();
+        testGain.dispose();
+        console.log('Manual test oscillators stopped and disposed');
+      }, 3000);
+      
+    } catch (error) {
+      console.log('Error in manual test oscillators:', error);
+    }
+  }, []);
+
+  // Debug function to check current state
+  const debugState = useCallback(() => {
+    console.log('Current frequency state:', {
+      leftEnabled: state.leftChannel.frequency.enabled,
+      leftFreq: state.leftChannel.frequency.frequency,
+      leftWet: state.leftChannel.frequency.wet,
+      rightEnabled: state.rightChannel.frequency.enabled,
+      rightFreq: state.rightChannel.frequency.frequency,
+      rightWet: state.rightChannel.frequency.wet,
+      leftOscExists: !!leftOscillatorRef.current,
+      rightOscExists: !!rightOscillatorRef.current,
+      leftOscGain: leftOscGainRef.current?.gain.value,
+      rightOscGain: rightOscGainRef.current?.gain.value
+    });
+  }, [state.leftChannel.frequency, state.rightChannel.frequency]);
 
   return {
     state,
@@ -567,6 +854,8 @@ export const useAudioProcessing = () => {
     handlePlay,
     handleStop,
     toggleLoop,
+    testOscillators,
+    debugState,
     isLoading: state.isLoading,
     // Visualizer removed
   };

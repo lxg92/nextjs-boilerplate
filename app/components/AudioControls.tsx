@@ -17,6 +17,10 @@ interface AudioControlsProps {
   onRightDelayToggle: (enabled: boolean) => void;
   onLeftDelayChange: (params: { delayTime?: string; feedback?: number; wet?: number }) => void;
   onRightDelayChange: (params: { delayTime?: string; feedback?: number; wet?: number }) => void;
+  onLeftFrequencyToggle: (enabled: boolean) => void;
+  onRightFrequencyToggle: (enabled: boolean) => void;
+  onLeftFrequencyChange: (params: { frequency?: number; wet?: number }) => void;
+  onRightFrequencyChange: (params: { frequency?: number; wet?: number }) => void;
 }
 
 const ChannelPanel = ({
@@ -28,6 +32,8 @@ const ChannelPanel = ({
   onReverbChange,
   onDelayToggle,
   onDelayChange,
+  onFrequencyToggle,
+  onFrequencyChange,
 }: {
   channel: string;
   config: ChannelConfig;
@@ -37,6 +43,8 @@ const ChannelPanel = ({
   onReverbChange: (params: { roomSize?: number; wet?: number }) => void;
   onDelayToggle: (enabled: boolean) => void;
   onDelayChange: (params: { delayTime?: string; feedback?: number; wet?: number }) => void;
+  onFrequencyToggle: (enabled: boolean) => void;
+  onFrequencyChange: (params: { frequency?: number; wet?: number }) => void;
 }) => {
   return (
     <div className="flex-1 space-y-4">
@@ -189,6 +197,53 @@ const ChannelPanel = ({
           </div>
         )}
       </div>
+
+      {/* Frequency Control */}
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-900">
+        <div className="flex items-center justify-between mb-3">
+          <label className="text-sm font-medium text-gray-900 dark:text-white">Frequency (Binaural Beat)</label>
+          <input
+            type="checkbox"
+            checked={config.frequency.enabled}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onFrequencyToggle(e.target.checked)}
+            className="rounded"
+          />
+        </div>
+        
+        {config.frequency.enabled && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-gray-700 dark:text-gray-300 mb-1">
+                Frequency: {config.frequency.frequency}Hz
+              </label>
+              <input
+                type="range"
+                min="100"
+                max="1000"
+                step="1"
+                value={config.frequency.frequency}
+                onChange={(e) => onFrequencyChange({ frequency: Number(e.target.value) })}
+                className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs text-gray-700 dark:text-gray-300 mb-1">
+                Wet Mix: {Math.round(config.frequency.wet * 100)}%
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={config.frequency.wet}
+                onChange={(e) => onFrequencyChange({ wet: Number(e.target.value) })}
+                className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -208,6 +263,10 @@ export default function AudioControls({
   onRightDelayToggle,
   onLeftDelayChange,
   onRightDelayChange,
+  onLeftFrequencyToggle,
+  onRightFrequencyToggle,
+  onLeftFrequencyChange,
+  onRightFrequencyChange,
 }: AudioControlsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -220,6 +279,8 @@ export default function AudioControls({
         onReverbChange={onLeftReverbChange}
         onDelayToggle={onLeftDelayToggle}
         onDelayChange={onLeftDelayChange}
+        onFrequencyToggle={onLeftFrequencyToggle}
+        onFrequencyChange={onLeftFrequencyChange}
       />
       
       <ChannelPanel
@@ -231,6 +292,8 @@ export default function AudioControls({
         onReverbChange={onRightReverbChange}
         onDelayToggle={onRightDelayToggle}
         onDelayChange={onRightDelayChange}
+        onFrequencyToggle={onRightFrequencyToggle}
+        onFrequencyChange={onRightFrequencyChange}
       />
     </div>
   );
