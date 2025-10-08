@@ -287,6 +287,46 @@ export const useAudioProcessing = () => {
     cleanup();
   }, [cleanup]);
 
+  // Test oscillators function
+  const testOscillators = useCallback(async () => {
+    if (Tone.context.state !== "running") {
+      await Tone.start();
+    }
+    
+    // Start oscillators if they exist
+    if (leftOscillatorRef.current && rightOscillatorRef.current) {
+      try {
+        leftOscillatorRef.current.start();
+        rightOscillatorRef.current.start();
+        
+        // Stop after 3 seconds
+        setTimeout(() => {
+          try {
+            leftOscillatorRef.current?.stop();
+            rightOscillatorRef.current?.stop();
+          } catch (e) {
+            console.warn("Error stopping test oscillators:", e);
+          }
+        }, 3000);
+      } catch (e) {
+        console.warn("Error starting test oscillators:", e);
+      }
+    }
+  }, [leftOscillatorRef, rightOscillatorRef]);
+
+  // Debug state function
+  const debugState = useCallback(() => {
+    console.log("=== Audio Processing State Debug ===");
+    console.log("Current State:", state);
+    console.log("Audio URL:", audioUrl);
+    console.log("Player Loaded:", playerRef.current?.loaded);
+    console.log("Tone Context State:", Tone.context.state);
+    console.log("Left Oscillator:", leftOscillatorRef.current);
+    console.log("Right Oscillator:", rightOscillatorRef.current);
+    console.log("Master Gain:", masterGainRef.current);
+    console.log("=====================================");
+  }, [state, audioUrl, playerRef, leftOscillatorRef, rightOscillatorRef, masterGainRef]);
+
   // Effect to recreate chain when audio URL changes
   useEffect(() => {
     if (audioUrl) {
@@ -312,6 +352,8 @@ export const useAudioProcessing = () => {
     handlePlay,
     handleStop,
     toggleLoop,
+    testOscillators,
+    debugState,
     isLoading: state.isLoading,
     // Visualizer removed
   };
