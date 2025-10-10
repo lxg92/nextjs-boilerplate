@@ -3,6 +3,9 @@ import type { ChannelConfig } from "../hooks/useAudioProcessing";
 
 export type ChannelSide = "left" | "right";
 
+// Effect categories for proper lifecycle management
+export type EffectCategory = "dependent" | "independent";
+
 export type NodeBundle = {
   gain: Tone.Gain | null;
   pan: Tone.Panner | null;
@@ -15,6 +18,13 @@ export type NodeBundle = {
 export type MasterNodes = {
   masterGain: Tone.Gain | null;
 };
+
+// Effect configuration with category information
+export const EFFECT_CATEGORIES = {
+  reverb: "dependent" as EffectCategory,
+  delay: "dependent" as EffectCategory,
+  frequency: "independent" as EffectCategory,
+} as const;
 
 export const updateChannelParameters = (
   config: ChannelConfig,
@@ -29,26 +39,48 @@ export const updateChannelParameters = (
   nodes.gain.gain.value = Tone.dbToGain(Tone.gainToDb(config.volume / 100));
   nodes.pan.pan.value = config.pan;
 
-  // Reverb
-  nodes.reverb.decay = config.reverb.roomSize;
-  nodes.reverb.wet.value = config.reverb.enabled ? config.reverb.wet : 0;
-
-  // Delay
-  nodes.delay.delayTime.value = config.delay.delayTime;
-  nodes.delay.feedback.value = config.delay.feedback;
-  nodes.delay.wet.value = config.delay.enabled ? config.delay.wet : 0;
-
-  // Oscillator
-  nodes.oscillator.frequency.value = config.frequency.frequency;
-  nodes.oscillatorGain.gain.value = config.frequency.enabled ? config.frequency.wet : 0;
-  
-  // Handle oscillator start/stop during playback
+  // Dependent effects (Reverb, Delay) - only active when voice is playing
   if (isPlaying) {
-    if (config.frequency.enabled) {
-      try { nodes.oscillator.start(); } catch {}
-    } else {
-      try { nodes.oscillator.stop(); } catch {}
+    // Reverb
+    nodes.reverb.decay = config.reverb.roomSize;
+    nodes.reverb.wet.value = config.reverb.enabled ? config.reverb.wet : 0;
+
+    // Delay
+    nodes.delay.delayTime.value = config.delay.delayTime;
+    nodes.delay.feedback.value = config.delay.feedback;
+    nodes.delay.wet.value = config.delay.enabled ? config.delay.wet : 0;
+  } else {
+    // Disable dependent effects when not playing
+    nodes.reverb.wet.value = 0;
+    nodes.delay.wet.value = 0;
+  }
+
+  // Independent effects (Frequency) - controlled by enabled state AND playback state
+  nodes.oscillator.frequency.value = config.frequency.frequency;
+  
+  // Independent effects should only be active when both enabled AND playing
+  const shouldBeActive = config.frequency.enabled && isPlaying;
+  
+  if (shouldBeActive) {
+    // Start oscillator if not already running
+    if (nodes.oscillator.state !== "started") {
+      try {
+        nodes.oscillator.start();
+      } catch (e) {
+        // Oscillator might already be started, ignore error
+      }
     }
+    nodes.oscillatorGain.gain.value = config.frequency.wet;
+  } else {
+    // Stop oscillator when disabled OR when playback stops
+    if (nodes.oscillator.state === "started") {
+      try {
+        nodes.oscillator.stop();
+      } catch (e) {
+        // Oscillator might already be stopped, ignore error
+      }
+    }
+    nodes.oscillatorGain.gain.value = 0;
   }
 };
 
@@ -58,15 +90,46 @@ export const updateMasterVolume = (masterVolume: number, masterGain: Tone.Gain |
 };
 
 export const stopAllEffects = (leftNodes: NodeBundle, rightNodes: NodeBundle) => {
-  // Stop oscillators
-  try { leftNodes.oscillator?.stop(); } catch {}
-  try { rightNodes.oscillator?.stop(); } catch {}
-  
-  // Reset effect wet levels to 0
+  // Stop dependent effects (reverb, delay) when playback ends
   if (leftNodes.reverb) leftNodes.reverb.wet.value = 0;
   if (leftNodes.delay) leftNodes.delay.wet.value = 0;
   if (rightNodes.reverb) rightNodes.reverb.wet.value = 0;
   if (rightNodes.delay) rightNodes.delay.wet.value = 0;
+  
+  // Stop independent effects (frequency) when playback ends
+  // Independent effects should only run during playback
+  if (leftNodes.oscillator && leftNodes.oscillator.state === "started") {
+    try {
+      leftNodes.oscillator.stop();
+    } catch (e) {
+      // Oscillator might already be stopped, ignore error
+    }
+  }
+  if (rightNodes.oscillator && rightNodes.oscillator.state === "started") {
+    try {
+      rightNodes.oscillator.stop();
+    } catch (e) {
+      // Oscillator might already be stopped, ignore error
+    }
+  }
+  if (leftNodes.oscillatorGain) leftNodes.oscillatorGain.gain.value = 0;
+  if (rightNodes.oscillatorGain) rightNodes.oscillatorGain.gain.value = 0;
+};
+
+// Helper function to get independent effects that should be active during playback
+export const getActiveIndependentEffects = (config: ChannelConfig) => {
+  const activeEffects: string[] = [];
+  
+  if (config.frequency.enabled) {
+    activeEffects.push('frequency');
+  }
+  
+  // Future independent effects can be added here
+  // if (config.newEffect.enabled) {
+  //   activeEffects.push('newEffect');
+  // }
+  
+  return activeEffects;
 };
 
 

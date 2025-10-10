@@ -105,13 +105,38 @@ export const useAudioProcessing = () => {
   } = useToneNodes();
 
   const { start: startPlayback, stop: stopPlayback, setLoop: setLoopPlayback, cleanupPlayback } = usePlaybackControl(
-    { playerRef, leftOscillatorRef, rightOscillatorRef },
+    { 
+      playerRef,
+      leftOscillatorRef,
+      rightOscillatorRef,
+      leftOscGainRef,
+      rightOscGainRef
+    },
     {
       setIsPlaying: (v: boolean) => setState(prev => ({ ...prev, isPlaying: v })),
       setProgress: (currentTime: number, duration: number, progress: number) => setState(prev => ({
         ...prev,
         playbackProgress: { currentTime, duration, progress }
       })),
+      onPlaybackStart: () => {
+        // Update channel parameters when playback starts to ensure effects are properly applied
+        updateChannelParameters(state.leftChannel, {
+          gain: leftGainRef.current,
+          pan: leftPanRef.current,
+          reverb: leftReverbRef.current,
+          delay: leftDelayRef.current,
+          oscillator: leftOscillatorRef.current,
+          oscillatorGain: leftOscGainRef.current,
+        }, true); // Force isPlaying = true
+        updateChannelParameters(state.rightChannel, {
+          gain: rightGainRef.current,
+          pan: rightPanRef.current,
+          reverb: rightReverbRef.current,
+          delay: rightDelayRef.current,
+          oscillator: rightOscillatorRef.current,
+          oscillatorGain: rightOscGainRef.current,
+        }, true); // Force isPlaying = true
+      },
       onPlaybackEnd: () => {
         // Stop all effects when playback naturally ends
         stopAllEffects(
@@ -135,20 +160,13 @@ export const useAudioProcessing = () => {
       },
     },
     {
-      leftEnabled: state.leftChannel.frequency.enabled,
-      rightEnabled: state.rightChannel.frequency.enabled,
+      leftFrequencyEnabled: state.leftChannel.frequency.enabled,
+      rightFrequencyEnabled: state.rightChannel.frequency.enabled,
     }
   );
 
-  // Oscillators are now controlled by playback control only
+  // Independent effects (frequency) are controlled by enabled state and only active during playback
 
-  // Initialize Tone.js context
-  const initializeTone = useCallback(async () => {
-    if (Tone.context.state !== "running") {
-      await Tone.start();
-    }
-    // Visualizer removed
-  }, []);
 
   // Progress handled in usePlaybackControl
 
@@ -265,7 +283,8 @@ export const useAudioProcessing = () => {
       await createAudioChain();
     }
     if (!playerRef.current || !playerRef.current.loaded) return;
-    // Oscillators are now started/stopped by playback control based on their enabled state
+    
+    // Start playback - effects will be enabled via onPlaybackStart callback
     startPlayback(state.loop);
   }, [createAudioChain, playerRef, startPlayback, state.loop]);
 
@@ -287,32 +306,33 @@ export const useAudioProcessing = () => {
     cleanup();
   }, [cleanup]);
 
-  // Test oscillators function
+  // Test oscillators function - temporarily enables independent effects
   const testOscillators = useCallback(async () => {
     if (Tone.context.state !== "running") {
       await Tone.start();
     }
     
-    // Start oscillators if they exist
-    if (leftOscillatorRef.current && rightOscillatorRef.current) {
-      try {
-        leftOscillatorRef.current.start();
-        rightOscillatorRef.current.start();
-        
-        // Stop after 3 seconds
-        setTimeout(() => {
-          try {
-            leftOscillatorRef.current?.stop();
-            rightOscillatorRef.current?.stop();
-          } catch (e) {
-            console.warn("Error stopping test oscillators:", e);
-          }
-        }, 3000);
-      } catch (e) {
-        console.warn("Error starting test oscillators:", e);
-      }
+    // Temporarily enable oscillators for testing
+    if (leftOscillatorRef.current && rightOscillatorRef.current && 
+        leftOscGainRef.current && rightOscGainRef.current) {
+      
+      // Start oscillators
+      try { leftOscillatorRef.current.start(); } catch {}
+      try { rightOscillatorRef.current.start(); } catch {}
+      
+      // Enable oscillators
+      leftOscGainRef.current.gain.value = 0.3;
+      rightOscGainRef.current.gain.value = 0.3;
+      
+      // Stop and disable after 3 seconds
+      setTimeout(() => {
+        try { leftOscillatorRef.current?.stop(); } catch {}
+        try { rightOscillatorRef.current?.stop(); } catch {}
+        if (leftOscGainRef.current) leftOscGainRef.current.gain.value = 0;
+        if (rightOscGainRef.current) rightOscGainRef.current.gain.value = 0;
+      }, 3000);
     }
-  }, [leftOscillatorRef, rightOscillatorRef]);
+  }, [leftOscillatorRef, rightOscillatorRef, leftOscGainRef, rightOscGainRef]);
 
   // Debug state function
   const debugState = useCallback(() => {

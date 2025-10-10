@@ -128,8 +128,8 @@ export const useToneNodes = () => {
     rightOscGainRef.current = rightOscGain;
     masterGainRef.current = masterGain;
 
-    // Don't start oscillators during chain creation - they should only play when recording is playing
-    // The oscillators will be started/stopped by the playback control
+    // Oscillators are created but not started - they will be controlled by playback state
+    // Independent effects only run when voice playback is active
 
     return { loaded: player.loaded };
   }, [cleanup]);

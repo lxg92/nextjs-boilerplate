@@ -7,20 +7,23 @@ type Refs = {
   playerRef: React.MutableRefObject<Tone.Player | null>;
   leftOscillatorRef: React.MutableRefObject<Tone.Oscillator | null>;
   rightOscillatorRef: React.MutableRefObject<Tone.Oscillator | null>;
+  leftOscGainRef: React.MutableRefObject<Tone.Gain | null>;
+  rightOscGainRef: React.MutableRefObject<Tone.Gain | null>;
 };
 
 type Setters = {
   setIsPlaying: (v: boolean) => void;
   setProgress: (currentTime: number, duration: number, progress: number) => void;
   onPlaybackEnd?: () => void;
+  onPlaybackStart?: () => void;
 };
 
-type OscillatorState = {
-  leftEnabled: boolean;
-  rightEnabled: boolean;
+type IndependentEffectState = {
+  leftFrequencyEnabled: boolean;
+  rightFrequencyEnabled: boolean;
 };
 
-export const usePlaybackControl = (refs: Refs, setters: Setters, oscillatorState?: OscillatorState) => {
+export const usePlaybackControl = (refs: Refs, setters: Setters, independentEffects?: IndependentEffectState) => {
   const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const playbackStartTimeRef = useRef<number | null>(null);
@@ -41,13 +44,14 @@ export const usePlaybackControl = (refs: Refs, setters: Setters, oscillatorState
     if (refs.playerRef.current) {
       refs.playerRef.current.stop();
     }
-    try { refs.leftOscillatorRef.current?.stop(); } catch {}
-    try { refs.rightOscillatorRef.current?.stop(); } catch {}
+
+    // Call onPlaybackEnd to trigger stopAllEffects for proper cleanup
+    setters.onPlaybackEnd?.();
 
     playbackStartTimeRef.current = null;
     setters.setIsPlaying(false);
     clearTimers();
-  }, [refs.playerRef, refs.leftOscillatorRef, refs.rightOscillatorRef, clearTimers, setters]);
+  }, [refs.playerRef, clearTimers, setters]);
 
   const start = useCallback((loop: boolean) => {
     if (!refs.playerRef.current || !refs.playerRef.current.loaded) return;
@@ -57,16 +61,14 @@ export const usePlaybackControl = (refs: Refs, setters: Setters, oscillatorState
     playbackStartTimeRef.current = Tone.now();
     loopStateRef.current = loop;
 
-    // Start oscillators if they are enabled
-    if (oscillatorState?.leftEnabled && refs.leftOscillatorRef.current) {
-      try { refs.leftOscillatorRef.current.start(); } catch {}
-    }
-    if (oscillatorState?.rightEnabled && refs.rightOscillatorRef.current) {
-      try { refs.rightOscillatorRef.current.start(); } catch {}
-    }
+    // Independent effects (oscillators) are now handled by updateChannelParameters
+    // when their enabled state changes, so no need to start them here
 
     setters.setIsPlaying(true);
     setters.setProgress(0, audioDuration, 0);
+    
+    // Notify that playback has started so effects can be properly enabled
+    setters.onPlaybackStart?.();
 
     const updateProgress = () => {
       if (!refs.playerRef.current || playbackStartTimeRef.current === null) return;
@@ -90,16 +92,14 @@ export const usePlaybackControl = (refs: Refs, setters: Setters, oscillatorState
 
     if (!loop) {
       playbackTimerRef.current = setTimeout(() => {
-        // Stop oscillators when playback naturally ends
-        try { refs.leftOscillatorRef.current?.stop(); } catch {}
-        try { refs.rightOscillatorRef.current?.stop(); } catch {}
+        // Independent effects are handled by stopAllEffects in onPlaybackEnd callback
         
         setters.setIsPlaying(false);
         setters.onPlaybackEnd?.();
         clearTimers();
       }, Math.floor(audioDuration * 1000) + 100);
     }
-  }, [refs.playerRef, refs.leftOscillatorRef, refs.rightOscillatorRef, oscillatorState, setters, clearTimers]);
+  }, [refs.playerRef, independentEffects, setters, clearTimers]);
 
   const setLoop = useCallback((loop: boolean) => {
     loopStateRef.current = loop;
@@ -119,9 +119,7 @@ export const usePlaybackControl = (refs: Refs, setters: Setters, oscillatorState
         const remainingTime = Math.max(0, audioDuration - (elapsedTime % audioDuration));
         
         playbackTimerRef.current = setTimeout(() => {
-          // Stop oscillators when playback naturally ends
-          try { refs.leftOscillatorRef.current?.stop(); } catch {}
-          try { refs.rightOscillatorRef.current?.stop(); } catch {}
+          // Independent effects are handled by stopAllEffects in onPlaybackEnd callback
           
           setters.setIsPlaying(false);
           setters.onPlaybackEnd?.();
@@ -129,7 +127,7 @@ export const usePlaybackControl = (refs: Refs, setters: Setters, oscillatorState
         }, Math.floor(remainingTime * 1000) + 100);
       }
     }
-  }, [refs.playerRef, refs.leftOscillatorRef, refs.rightOscillatorRef, setters, clearTimers]);
+  }, [refs.playerRef, setters, clearTimers]);
 
   const cleanupPlayback = useCallback(() => {
     clearTimers();
