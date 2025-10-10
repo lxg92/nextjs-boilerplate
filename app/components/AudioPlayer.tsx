@@ -22,6 +22,8 @@ interface ChannelHandlers {
   onDelayChange: (channel: Channel, params: { delayTime?: string; feedback?: number; wet?: number }) => void;
   onFrequencyToggle: (channel: Channel, enabled: boolean) => void;
   onFrequencyChange: (channel: Channel, params: { frequency?: number; wet?: number }) => void;
+  onNoiseToggle: (channel: Channel, enabled: boolean) => void;
+  onNoiseChange: (channel: Channel, params: { type?: "brown" | "pink" | "white"; wet?: number }) => void;
 }
 
 const Spinner = ({ label }: { label: string }) => (
@@ -102,6 +104,24 @@ const useChannelHandlers = (
     });
   };
 
+  const handleNoiseToggle = (channel: Channel, enabled: boolean) => {
+    updateChannelConfig(channel, {
+      noise: { ...state[`${channel}Channel`].noise, enabled }
+    });
+  };
+
+  const handleNoiseChange = (
+    channel: Channel,
+    params: { type?: "brown" | "pink" | "white"; wet?: number }
+  ) => {
+    updateChannelConfig(channel, {
+      noise: {
+        ...state[`${channel}Channel`].noise,
+        ...params
+      }
+    });
+  };
+
   return {
     onVolumeChange: handleVolumeChange,
     onPanChange: handlePanChange,
@@ -111,6 +131,8 @@ const useChannelHandlers = (
     onDelayChange: handleDelayChange,
     onFrequencyToggle: handleFrequencyToggle,
     onFrequencyChange: handleFrequencyChange,
+    onNoiseToggle: handleNoiseToggle,
+    onNoiseChange: handleNoiseChange,
   };
 };
 
@@ -393,6 +415,10 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
           onRightFrequencyToggle={(enabled) => channelHandlers.onFrequencyToggle("right", enabled)}
           onLeftFrequencyChange={(params) => channelHandlers.onFrequencyChange("left", params)}
           onRightFrequencyChange={(params) => channelHandlers.onFrequencyChange("right", params)}
+          onLeftNoiseToggle={(enabled) => channelHandlers.onNoiseToggle("left", enabled)}
+          onRightNoiseToggle={(enabled) => channelHandlers.onNoiseToggle("right", enabled)}
+          onLeftNoiseChange={(params) => channelHandlers.onNoiseChange("left", params)}
+          onRightNoiseChange={(params) => channelHandlers.onNoiseChange("right", params)}
         />
       </div>
     </div>

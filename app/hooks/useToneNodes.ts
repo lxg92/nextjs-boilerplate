@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from "react";
 import * as Tone from "tone/build/esm/index.js";
-import { AudioProcessingState } from "./useAudioProcessing";
+import { AudioProcessingState, ChannelConfig } from "./useAudioProcessing";
 
 export const useToneNodes = () => {
   const playerRef = useRef<Tone.Player | null>(null);
@@ -18,6 +18,10 @@ export const useToneNodes = () => {
   const rightOscillatorRef = useRef<Tone.Oscillator | null>(null);
   const leftOscGainRef = useRef<Tone.Gain | null>(null);
   const rightOscGainRef = useRef<Tone.Gain | null>(null);
+  const leftNoiseRef = useRef<Tone.Noise | null>(null);
+  const rightNoiseRef = useRef<Tone.Noise | null>(null);
+  const leftNoiseGainRef = useRef<Tone.Gain | null>(null);
+  const rightNoiseGainRef = useRef<Tone.Gain | null>(null);
   const masterGainRef = useRef<Tone.Gain | null>(null);
 
   const cleanup = useCallback(() => {
@@ -35,6 +39,10 @@ export const useToneNodes = () => {
       rightOscillatorRef.current,
       leftOscGainRef.current,
       rightOscGainRef.current,
+      leftNoiseRef.current,
+      rightNoiseRef.current,
+      leftNoiseGainRef.current,
+      rightNoiseGainRef.current,
       masterGainRef.current,
     ].forEach((node) => node?.dispose());
 
@@ -51,7 +59,39 @@ export const useToneNodes = () => {
     rightOscillatorRef.current = null;
     leftOscGainRef.current = null;
     rightOscGainRef.current = null;
+    leftNoiseRef.current = null;
+    rightNoiseRef.current = null;
+    leftNoiseGainRef.current = null;
+    rightNoiseGainRef.current = null;
     masterGainRef.current = null;
+  }, []);
+
+  // Helper function to configure effects for a channel
+  const configureChannelEffects = useCallback((
+    channelConfig: ChannelConfig,
+    reverb: Tone.Reverb,
+    delay: Tone.PingPongDelay,
+    oscillator: Tone.Oscillator,
+    oscGain: Tone.Gain,
+    noise: Tone.Noise,
+    noiseGain: Tone.Gain
+  ) => {
+    // Configure reverb
+    reverb.decay = channelConfig.reverb.roomSize;
+    reverb.wet.value = channelConfig.reverb.enabled ? channelConfig.reverb.wet : 0;
+
+    // Configure delay
+    delay.delayTime.value = channelConfig.delay.delayTime;
+    delay.feedback.value = channelConfig.delay.feedback;
+    delay.wet.value = channelConfig.delay.enabled ? channelConfig.delay.wet : 0;
+
+    // Configure oscillator
+    oscillator.frequency.value = channelConfig.frequency.frequency;
+    oscGain.gain.value = channelConfig.frequency.enabled ? channelConfig.frequency.wet : 0;
+
+    // Configure noise
+    noise.type = channelConfig.noise.type;
+    noiseGain.gain.value = channelConfig.noise.enabled ? channelConfig.noise.wet : 0;
   }, []);
 
   const createAudioChain = useCallback(async (audioUrl: string, state: AudioProcessingState) => {
@@ -76,26 +116,15 @@ export const useToneNodes = () => {
     const rightOscillator = new Tone.Oscillator(state.rightChannel.frequency.frequency, "sine");
     const leftOscGain = new Tone.Gain();
     const rightOscGain = new Tone.Gain();
+    const leftNoise = new Tone.Noise(state.leftChannel.noise.type);
+    const rightNoise = new Tone.Noise(state.rightChannel.noise.type);
+    const leftNoiseGain = new Tone.Gain();
+    const rightNoiseGain = new Tone.Gain();
     const masterGain = new Tone.Gain();
 
-    // Configure effects
-    leftReverb.decay = state.leftChannel.reverb.roomSize;
-    leftReverb.wet.value = state.leftChannel.reverb.enabled ? state.leftChannel.reverb.wet : 0;
-    rightReverb.decay = state.rightChannel.reverb.roomSize;
-    rightReverb.wet.value = state.rightChannel.reverb.enabled ? state.rightChannel.reverb.wet : 0;
-
-    leftDelay.delayTime.value = state.leftChannel.delay.delayTime;
-    leftDelay.feedback.value = state.leftChannel.delay.feedback;
-    leftDelay.wet.value = state.leftChannel.delay.enabled ? state.leftChannel.delay.wet : 0;
-    rightDelay.delayTime.value = state.rightChannel.delay.delayTime;
-    rightDelay.feedback.value = state.rightChannel.delay.feedback;
-    rightDelay.wet.value = state.rightChannel.delay.enabled ? state.rightChannel.delay.wet : 0;
-
-    // Oscillators
-    leftOscillator.frequency.value = state.leftChannel.frequency.frequency;
-    rightOscillator.frequency.value = state.rightChannel.frequency.frequency;
-    leftOscGain.gain.value = state.leftChannel.frequency.enabled ? state.leftChannel.frequency.wet : 0;
-    rightOscGain.gain.value = state.rightChannel.frequency.enabled ? state.rightChannel.frequency.wet : 0;
+    // Configure effects using helper function
+    configureChannelEffects(state.leftChannel, leftReverb, leftDelay, leftOscillator, leftOscGain, leftNoise, leftNoiseGain);
+    configureChannelEffects(state.rightChannel, rightReverb, rightDelay, rightOscillator, rightOscGain, rightNoise, rightNoiseGain);
 
     // Pan/volume
     leftPan.pan.value = state.leftChannel.pan;
@@ -110,6 +139,8 @@ export const useToneNodes = () => {
     rightDelay.chain(rightReverb, rightGain, rightPan, masterGain);
     leftOscillator.chain(leftOscGain, masterGain);
     rightOscillator.chain(rightOscGain, masterGain);
+    leftNoise.chain(leftNoiseGain, masterGain);
+    rightNoise.chain(rightNoiseGain, masterGain);
     masterGain.toDestination();
 
     // Refs
@@ -126,13 +157,17 @@ export const useToneNodes = () => {
     rightOscillatorRef.current = rightOscillator;
     leftOscGainRef.current = leftOscGain;
     rightOscGainRef.current = rightOscGain;
+    leftNoiseRef.current = leftNoise;
+    rightNoiseRef.current = rightNoise;
+    leftNoiseGainRef.current = leftNoiseGain;
+    rightNoiseGainRef.current = rightNoiseGain;
     masterGainRef.current = masterGain;
 
     // Oscillators are created but not started - they will be controlled by playback state
     // Independent effects only run when voice playback is active
 
     return { loaded: player.loaded };
-  }, [cleanup]);
+  }, [cleanup, configureChannelEffects]);
 
   return {
     // refs
@@ -149,6 +184,10 @@ export const useToneNodes = () => {
     rightOscillatorRef,
     leftOscGainRef,
     rightOscGainRef,
+    leftNoiseRef,
+    rightNoiseRef,
+    leftNoiseGainRef,
+    rightNoiseGainRef,
     masterGainRef,
     // actions
     createAudioChain,

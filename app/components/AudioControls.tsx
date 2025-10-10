@@ -21,6 +21,10 @@ interface AudioControlsProps {
   onRightFrequencyToggle: (enabled: boolean) => void;
   onLeftFrequencyChange: (params: { frequency?: number; wet?: number }) => void;
   onRightFrequencyChange: (params: { frequency?: number; wet?: number }) => void;
+  onLeftNoiseToggle: (enabled: boolean) => void;
+  onRightNoiseToggle: (enabled: boolean) => void;
+  onLeftNoiseChange: (params: { type?: "brown" | "pink" | "white"; wet?: number }) => void;
+  onRightNoiseChange: (params: { type?: "brown" | "pink" | "white"; wet?: number }) => void;
 }
 
 const ChannelPanel = ({
@@ -34,6 +38,8 @@ const ChannelPanel = ({
   onDelayChange,
   onFrequencyToggle,
   onFrequencyChange,
+  onNoiseToggle,
+  onNoiseChange,
 }: {
   channel: string;
   config: ChannelConfig;
@@ -45,6 +51,8 @@ const ChannelPanel = ({
   onDelayChange: (params: { delayTime?: string; feedback?: number; wet?: number }) => void;
   onFrequencyToggle: (enabled: boolean) => void;
   onFrequencyChange: (params: { frequency?: number; wet?: number }) => void;
+  onNoiseToggle: (enabled: boolean) => void;
+  onNoiseChange: (params: { type?: "brown" | "pink" | "white"; wet?: number }) => void;
 }) => {
   return (
     <div className="flex-1 space-y-4">
@@ -244,6 +252,53 @@ const ChannelPanel = ({
           </div>
         )}
       </div>
+
+      {/* Noise Control */}
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-900">
+        <div className="flex items-center justify-between mb-3">
+          <label className="text-sm font-medium text-gray-900 dark:text-white">Noise Generator</label>
+          <input
+            type="checkbox"
+            checked={config.noise.enabled}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onNoiseToggle(e.target.checked)}
+            className="rounded"
+          />
+        </div>
+        
+        {config.noise.enabled && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-gray-700 dark:text-gray-300 mb-1">
+                Noise Type
+              </label>
+              <select
+                value={config.noise.type}
+                onChange={(e) => onNoiseChange({ type: e.target.value as "brown" | "pink" | "white" })}
+                className="w-full text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded p-1 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              >
+                <option value="white">White Noise</option>
+                <option value="pink">Pink Noise</option>
+                <option value="brown">Brown Noise</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-xs text-gray-700 dark:text-gray-300 mb-1">
+                Wet Mix: {Math.round(config.noise.wet * 100)}%
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={config.noise.wet}
+                onChange={(e) => onNoiseChange({ wet: Number(e.target.value) })}
+                className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -267,6 +322,10 @@ export default function AudioControls({
   onRightFrequencyToggle,
   onLeftFrequencyChange,
   onRightFrequencyChange,
+  onLeftNoiseToggle,
+  onRightNoiseToggle,
+  onLeftNoiseChange,
+  onRightNoiseChange,
 }: AudioControlsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -281,6 +340,8 @@ export default function AudioControls({
         onDelayChange={onLeftDelayChange}
         onFrequencyToggle={onLeftFrequencyToggle}
         onFrequencyChange={onLeftFrequencyChange}
+        onNoiseToggle={onLeftNoiseToggle}
+        onNoiseChange={onLeftNoiseChange}
       />
       
       <ChannelPanel
@@ -294,6 +355,8 @@ export default function AudioControls({
         onDelayChange={onRightDelayChange}
         onFrequencyToggle={onRightFrequencyToggle}
         onFrequencyChange={onRightFrequencyChange}
+        onNoiseToggle={onRightNoiseToggle}
+        onNoiseChange={onRightNoiseChange}
       />
     </div>
   );

@@ -13,6 +13,8 @@ export type NodeBundle = {
   delay: Tone.PingPongDelay | null;
   oscillator: Tone.Oscillator | null;
   oscillatorGain: Tone.Gain | null;
+  noise: Tone.Noise | null;
+  noiseGain: Tone.Gain | null;
 };
 
 export type MasterNodes = {
@@ -24,6 +26,7 @@ export const EFFECT_CATEGORIES = {
   reverb: "dependent" as EffectCategory,
   delay: "dependent" as EffectCategory,
   frequency: "independent" as EffectCategory,
+  noise: "independent" as EffectCategory,
 } as const;
 
 export const updateChannelParameters = (
@@ -31,7 +34,7 @@ export const updateChannelParameters = (
   nodes: NodeBundle,
   isPlaying: boolean = false
 ) => {
-  if (!nodes.gain || !nodes.pan || !nodes.reverb || !nodes.delay || !nodes.oscillator || !nodes.oscillatorGain) {
+  if (!nodes.gain || !nodes.pan || !nodes.reverb || !nodes.delay || !nodes.oscillator || !nodes.oscillatorGain || !nodes.noise || !nodes.noiseGain) {
     return;
   }
 
@@ -82,6 +85,34 @@ export const updateChannelParameters = (
     }
     nodes.oscillatorGain.gain.value = 0;
   }
+
+  // Independent effects (Noise) - controlled by enabled state AND playback state
+  nodes.noise.type = config.noise.type;
+  
+  // Independent effects should only be active when both enabled AND playing
+  const noiseShouldBeActive = config.noise.enabled && isPlaying;
+  
+  if (noiseShouldBeActive) {
+    // Start noise if not already running
+    if (nodes.noise.state !== "started") {
+      try {
+        nodes.noise.start();
+      } catch (e) {
+        // Noise might already be started, ignore error
+      }
+    }
+    nodes.noiseGain.gain.value = config.noise.wet;
+  } else {
+    // Stop noise when disabled OR when playback stops
+    if (nodes.noise.state === "started") {
+      try {
+        nodes.noise.stop();
+      } catch (e) {
+        // Noise might already be stopped, ignore error
+      }
+    }
+    nodes.noiseGain.gain.value = 0;
+  }
 };
 
 export const updateMasterVolume = (masterVolume: number, masterGain: Tone.Gain | null) => {
@@ -114,6 +145,25 @@ export const stopAllEffects = (leftNodes: NodeBundle, rightNodes: NodeBundle) =>
   }
   if (leftNodes.oscillatorGain) leftNodes.oscillatorGain.gain.value = 0;
   if (rightNodes.oscillatorGain) rightNodes.oscillatorGain.gain.value = 0;
+
+  // Stop independent effects (noise) when playback ends
+  // Independent effects should only run during playback
+  if (leftNodes.noise && leftNodes.noise.state === "started") {
+    try {
+      leftNodes.noise.stop();
+    } catch (e) {
+      // Noise might already be stopped, ignore error
+    }
+  }
+  if (rightNodes.noise && rightNodes.noise.state === "started") {
+    try {
+      rightNodes.noise.stop();
+    } catch (e) {
+      // Noise might already be stopped, ignore error
+    }
+  }
+  if (leftNodes.noiseGain) leftNodes.noiseGain.gain.value = 0;
+  if (rightNodes.noiseGain) rightNodes.noiseGain.gain.value = 0;
 };
 
 // Helper function to get independent effects that should be active during playback
@@ -122,6 +172,10 @@ export const getActiveIndependentEffects = (config: ChannelConfig) => {
   
   if (config.frequency.enabled) {
     activeEffects.push('frequency');
+  }
+  
+  if (config.noise.enabled) {
+    activeEffects.push('noise');
   }
   
   // Future independent effects can be added here

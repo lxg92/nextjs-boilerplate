@@ -26,6 +26,11 @@ export interface ChannelConfig {
     frequency: number; // Hz
     wet: number; // 0-1
   };
+  noise: {
+    enabled: boolean;
+    type: "brown" | "pink" | "white";
+    wet: number; // 0-1
+  };
 }
 
 export interface AudioProcessingState {
@@ -64,6 +69,11 @@ const DEFAULT_CHANNEL_CONFIG: ChannelConfig = {
     frequency: 500, // Middle of 100-1000Hz range
     wet: 0.5,
   },
+  noise: {
+    enabled: false,
+    type: "white",
+    wet: 0.3,
+  },
 };
 
 const DEFAULT_STATE: AudioProcessingState = {
@@ -99,10 +109,45 @@ export const useAudioProcessing = () => {
     rightOscillatorRef,
     leftOscGainRef,
     rightOscGainRef,
+    leftNoiseRef,
+    rightNoiseRef,
+    leftNoiseGainRef,
+    rightNoiseGainRef,
     masterGainRef,
     createAudioChain: createToneChain,
     cleanup,
   } = useToneNodes();
+
+  // Helper function to create channel node bundles
+  const getChannelNodeBundles = useCallback(() => ({
+    left: {
+      gain: leftGainRef.current,
+      pan: leftPanRef.current,
+      reverb: leftReverbRef.current,
+      delay: leftDelayRef.current,
+      oscillator: leftOscillatorRef.current,
+      oscillatorGain: leftOscGainRef.current,
+      noise: leftNoiseRef.current,
+      noiseGain: leftNoiseGainRef.current,
+    },
+    right: {
+      gain: rightGainRef.current,
+      pan: rightPanRef.current,
+      reverb: rightReverbRef.current,
+      delay: rightDelayRef.current,
+      oscillator: rightOscillatorRef.current,
+      oscillatorGain: rightOscGainRef.current,
+      noise: rightNoiseRef.current,
+      noiseGain: rightNoiseGainRef.current,
+    },
+  }), [leftGainRef, rightGainRef, leftPanRef, rightPanRef, leftReverbRef, rightReverbRef, leftDelayRef, rightDelayRef, leftOscillatorRef, rightOscillatorRef, leftOscGainRef, rightOscGainRef, leftNoiseRef, rightNoiseRef, leftNoiseGainRef, rightNoiseGainRef]);
+
+  // Helper function to update both channel parameters
+  const updateBothChannels = useCallback((leftConfig: ChannelConfig, rightConfig: ChannelConfig, isPlaying: boolean) => {
+    const nodeBundles = getChannelNodeBundles();
+    updateChannelParameters(leftConfig, nodeBundles.left, isPlaying);
+    updateChannelParameters(rightConfig, nodeBundles.right, isPlaying);
+  }, [getChannelNodeBundles]);
 
   const { start: startPlayback, stop: stopPlayback, setLoop: setLoopPlayback, cleanupPlayback } = usePlaybackControl(
     { 
@@ -110,7 +155,11 @@ export const useAudioProcessing = () => {
       leftOscillatorRef,
       rightOscillatorRef,
       leftOscGainRef,
-      rightOscGainRef
+      rightOscGainRef,
+      leftNoiseRef,
+      rightNoiseRef,
+      leftNoiseGainRef,
+      rightNoiseGainRef
     },
     {
       setIsPlaying: (v: boolean) => setState(prev => ({ ...prev, isPlaying: v })),
@@ -120,48 +169,19 @@ export const useAudioProcessing = () => {
       })),
       onPlaybackStart: () => {
         // Update channel parameters when playback starts to ensure effects are properly applied
-        updateChannelParameters(state.leftChannel, {
-          gain: leftGainRef.current,
-          pan: leftPanRef.current,
-          reverb: leftReverbRef.current,
-          delay: leftDelayRef.current,
-          oscillator: leftOscillatorRef.current,
-          oscillatorGain: leftOscGainRef.current,
-        }, true); // Force isPlaying = true
-        updateChannelParameters(state.rightChannel, {
-          gain: rightGainRef.current,
-          pan: rightPanRef.current,
-          reverb: rightReverbRef.current,
-          delay: rightDelayRef.current,
-          oscillator: rightOscillatorRef.current,
-          oscillatorGain: rightOscGainRef.current,
-        }, true); // Force isPlaying = true
+        updateBothChannels(state.leftChannel, state.rightChannel, true);
       },
       onPlaybackEnd: () => {
         // Stop all effects when playback naturally ends
-        stopAllEffects(
-          {
-            gain: leftGainRef.current,
-            pan: leftPanRef.current,
-            reverb: leftReverbRef.current,
-            delay: leftDelayRef.current,
-            oscillator: leftOscillatorRef.current,
-            oscillatorGain: leftOscGainRef.current,
-          },
-          {
-            gain: rightGainRef.current,
-            pan: rightPanRef.current,
-            reverb: rightReverbRef.current,
-            delay: rightDelayRef.current,
-            oscillator: rightOscillatorRef.current,
-            oscillatorGain: rightOscGainRef.current,
-          }
-        );
+        const nodeBundles = getChannelNodeBundles();
+        stopAllEffects(nodeBundles.left, nodeBundles.right);
       },
     },
     {
       leftFrequencyEnabled: state.leftChannel.frequency.enabled,
       rightFrequencyEnabled: state.rightChannel.frequency.enabled,
+      leftNoiseEnabled: state.leftChannel.noise.enabled,
+      rightNoiseEnabled: state.rightChannel.noise.enabled,
     }
   );
 
@@ -210,28 +230,11 @@ export const useAudioProcessing = () => {
       };
       
       // Update audio parameters immediately with new state
-      setTimeout(() => {
-        updateChannelParameters(newState.leftChannel, {
-          gain: leftGainRef.current,
-          pan: leftPanRef.current,
-          reverb: leftReverbRef.current,
-          delay: leftDelayRef.current,
-          oscillator: leftOscillatorRef.current,
-          oscillatorGain: leftOscGainRef.current,
-        }, newState.isPlaying);
-        updateChannelParameters(newState.rightChannel, {
-          gain: rightGainRef.current,
-          pan: rightPanRef.current,
-          reverb: rightReverbRef.current,
-          delay: rightDelayRef.current,
-          oscillator: rightOscillatorRef.current,
-          oscillatorGain: rightOscGainRef.current,
-        }, newState.isPlaying);
-      }, 0);
+      updateBothChannels(newState.leftChannel, newState.rightChannel, newState.isPlaying);
       
       return newState;
     });
-  }, [leftGainRef, rightGainRef, leftPanRef, rightPanRef, leftReverbRef, rightReverbRef, leftDelayRef, rightDelayRef, leftOscillatorRef, rightOscillatorRef, leftOscGainRef, rightOscGainRef]);
+  }, [updateBothChannels]);
 
   // Update master volume
   const updateMasterVolume = useCallback((volume: number) => {
@@ -255,26 +258,10 @@ export const useAudioProcessing = () => {
       masterVolume: config.masterVolume,
     }));
 
-    setTimeout(() => {
-      updateChannelParameters(config.leftChannel, {
-        gain: leftGainRef.current,
-        pan: leftPanRef.current,
-        reverb: leftReverbRef.current,
-        delay: leftDelayRef.current,
-        oscillator: leftOscillatorRef.current,
-        oscillatorGain: leftOscGainRef.current,
-      }, state.isPlaying);
-      updateChannelParameters(config.rightChannel, {
-        gain: rightGainRef.current,
-        pan: rightPanRef.current,
-        reverb: rightReverbRef.current,
-        delay: rightDelayRef.current,
-        oscillator: rightOscillatorRef.current,
-        oscillatorGain: rightOscGainRef.current,
-      }, state.isPlaying);
-      applyMasterVol(config.masterVolume, masterGainRef.current);
-    }, 0);
-  }, [leftGainRef, leftPanRef, leftReverbRef, leftDelayRef, leftOscillatorRef, leftOscGainRef, rightGainRef, rightPanRef, rightReverbRef, rightDelayRef, rightOscillatorRef, rightOscGainRef, masterGainRef, state.isPlaying]);
+    // Update audio parameters immediately
+    updateBothChannels(config.leftChannel, config.rightChannel, state.isPlaying);
+    applyMasterVol(config.masterVolume, masterGainRef.current);
+  }, [updateBothChannels, state.isPlaying, masterGainRef]);
 
 
   // Play audio
@@ -343,9 +330,11 @@ export const useAudioProcessing = () => {
     console.log("Tone Context State:", Tone.context.state);
     console.log("Left Oscillator:", leftOscillatorRef.current);
     console.log("Right Oscillator:", rightOscillatorRef.current);
+    console.log("Left Noise:", leftNoiseRef.current);
+    console.log("Right Noise:", rightNoiseRef.current);
     console.log("Master Gain:", masterGainRef.current);
     console.log("=====================================");
-  }, [state, audioUrl, playerRef, leftOscillatorRef, rightOscillatorRef, masterGainRef]);
+  }, [state, audioUrl, playerRef, leftOscillatorRef, rightOscillatorRef, leftNoiseRef, rightNoiseRef, masterGainRef]);
 
   // Effect to recreate chain when audio URL changes
   useEffect(() => {

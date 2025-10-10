@@ -9,6 +9,10 @@ type Refs = {
   rightOscillatorRef: React.MutableRefObject<Tone.Oscillator | null>;
   leftOscGainRef: React.MutableRefObject<Tone.Gain | null>;
   rightOscGainRef: React.MutableRefObject<Tone.Gain | null>;
+  leftNoiseRef: React.MutableRefObject<Tone.Noise | null>;
+  rightNoiseRef: React.MutableRefObject<Tone.Noise | null>;
+  leftNoiseGainRef: React.MutableRefObject<Tone.Gain | null>;
+  rightNoiseGainRef: React.MutableRefObject<Tone.Gain | null>;
 };
 
 type Setters = {
@@ -21,6 +25,8 @@ type Setters = {
 type IndependentEffectState = {
   leftFrequencyEnabled: boolean;
   rightFrequencyEnabled: boolean;
+  leftNoiseEnabled: boolean;
+  rightNoiseEnabled: boolean;
 };
 
 export const usePlaybackControl = (refs: Refs, setters: Setters, independentEffects?: IndependentEffectState) => {
