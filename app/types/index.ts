@@ -36,3 +36,14 @@ export interface PlaybackProgress {
   duration: number; // in seconds
   progress: number; // 0-1 percentage
 }
+
+export interface Recording {
+  id: string;
+  audioUrl: string;
+  voiceId: string;
+  voiceName: string;
+  text: string;
+  speed: number;
+  timestamp: number;
+  audioConfig?: any; // Optional audio configuration for future preset saving
+}

@@ -6,11 +6,14 @@ import { Navigation, AppRoute } from "./components/Navigation";
 import { VoiceUploadRoute } from "./components/VoiceUploadRoute";
 import { VoiceSelectionRoute } from "./components/VoiceSelectionRoute";
 import { VoiceRecordingsRoute } from "./components/VoiceRecordingsRoute";
+import { Recording } from "./types";
 
 const MainContent = () => {
   const { logout } = useAuthContext();
   const [currentRoute, setCurrentRoute] = useState<AppRoute>("upload");
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
+  const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [currentRecordingId, setCurrentRecordingId] = useState<string | null>(null);
 
   const handleRouteChange = (route: AppRoute) => {
     setCurrentRoute(route);
@@ -26,6 +29,22 @@ const MainContent = () => {
     setSelectedVoiceId(voiceId);
   };
 
+  const handleTTSSuccess = (audioUrl: string, voiceId: string, voiceName: string, text: string, speed: number) => {
+    const recording: Recording = {
+      id: `recording_${Date.now()}`,
+      audioUrl,
+      voiceId,
+      voiceName,
+      text,
+      speed,
+      timestamp: Date.now()
+    };
+    
+    setRecordings(prev => [recording, ...prev]);
+    setCurrentRecordingId(recording.id);
+    setCurrentRoute("recordings");
+  };
+
   const renderCurrentRoute = () => {
     switch (currentRoute) {
       case "upload":
@@ -35,10 +54,17 @@ const MainContent = () => {
           <VoiceSelectionRoute 
             selectedVoiceId={selectedVoiceId || undefined}
             onVoiceSelect={handleVoiceSelect}
+            onTTSSuccess={handleTTSSuccess}
           />
         );
       case "recordings":
-        return <VoiceRecordingsRoute />;
+        return (
+          <VoiceRecordingsRoute 
+            recordings={recordings}
+            currentRecordingId={currentRecordingId}
+            onRecordingSelect={(recordingId) => setCurrentRecordingId(recordingId)}
+          />
+        );
       default:
         return <VoiceUploadRoute onUploadSuccess={handleUploadSuccess} />;
     }

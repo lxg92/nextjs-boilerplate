@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useVoiceManagement } from "../hooks/useVoiceManagement";
 import { useTTSGeneration } from "../hooks/useTTSGeneration";
-import { AudioPlayer } from "./AudioPlayer";
 
 const DEFAULT_TEXTS = [
   "Hello, this is a test of the voice cloning system.",
@@ -14,11 +13,13 @@ const DEFAULT_TEXTS = [
 interface VoiceSelectionRouteProps {
   selectedVoiceId?: string;
   onVoiceSelect?: (voiceId: string) => void;
+  onTTSSuccess?: (audioUrl: string, voiceId: string, voiceName: string, text: string, speed: number) => void;
 }
 
 export const VoiceSelectionRoute = ({ 
   selectedVoiceId: initialSelectedVoiceId, 
-  onVoiceSelect 
+  onVoiceSelect,
+  onTTSSuccess
 }: VoiceSelectionRouteProps) => {
   // Use the voice management hook
   const {
@@ -32,7 +33,6 @@ export const VoiceSelectionRoute = ({
 
   // Use the TTS generation hook
   const {
-    audioUrl,
     customText,
     selectedDefaultText,
     speechSpeed,
@@ -43,7 +43,7 @@ export const VoiceSelectionRoute = ({
     canGenerateSpeech,
     handleDefaultTextChange,
     handleCustomTextChange
-  } = useTTSGeneration();
+  } = useTTSGeneration(onTTSSuccess, selectedVoice);
 
   // Initialize selected voice if provided
   useEffect(() => {
@@ -271,16 +271,6 @@ export const VoiceSelectionRoute = ({
                   <p className="text-red-600 dark:text-red-400 text-sm font-medium">
                     {(ttsMutation.error as Error).message}
                   </p>
-                </div>
-              )}
-
-              {/* Audio Player */}
-              {audioUrl && (
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    Generated Audio
-                  </h3>
-                  <AudioPlayer audioUrl={audioUrl} />
                 </div>
               )}
             </div>

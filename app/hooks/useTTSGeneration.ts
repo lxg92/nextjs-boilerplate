@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { TTSRequest } from "../types";
 
-export const useTTSGeneration = () => {
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+export const useTTSGeneration = (onSuccess?: (audioUrl: string, voiceId: string, voiceName: string, text: string, speed: number) => void, selectedVoice?: { voice_id: string; name: string } | null) => {
   const [customText, setCustomText] = useState("");
   const [selectedDefaultText, setSelectedDefaultText] = useState("");
   const [speechSpeed, setSpeechSpeed] = useState(1.0);
@@ -31,10 +30,12 @@ export const useTTSGeneration = () => {
       const blob = await response.blob();
       return URL.createObjectURL(blob);
     },
-    onSuccess: (url) => {
-      // Clean up previous audio URL
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-      setAudioUrl(url);
+    onSuccess: (url, variables) => {
+      // Call the external success callback with all necessary data
+      if (onSuccess) {
+        const voiceName = selectedVoice?.name || "";
+        onSuccess(url, variables.voiceId, voiceName, variables.text, variables.speed);
+      }
     },
   });
 
@@ -56,7 +57,6 @@ export const useTTSGeneration = () => {
   };
 
   return {
-    audioUrl,
     customText,
     selectedDefaultText,
     speechSpeed,
