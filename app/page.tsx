@@ -6,14 +6,20 @@ import { Navigation, AppRoute } from "./components/Navigation";
 import { VoiceUploadRoute } from "./components/VoiceUploadRoute";
 import { VoiceSelectionRoute } from "./components/VoiceSelectionRoute";
 import { VoiceRecordingsRoute } from "./components/VoiceRecordingsRoute";
-import { Recording } from "./types";
+import { SubscriptionPlans } from "./components/SubscriptionPlans";
+import { useRecordings } from "./hooks/useRecordingPersistence";
+import { useUserProfile, useUsageStats } from "./hooks/useSession";
+import { UpgradePrompt } from "./components/UpgradePrompt";
 
 const MainContent = () => {
-  const { logout } = useAuthContext();
+  const { logout, userProfile } = useAuthContext();
   const [currentRoute, setCurrentRoute] = useState<AppRoute>("upload");
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
-  const [recordings, setRecordings] = useState<Recording[]>([]);
   const [currentRecordingId, setCurrentRecordingId] = useState<string | null>(null);
+
+  // Fetch recordings from server
+  const { data: recordingsData, isLoading: recordingsLoading } = useRecordings();
+  const { data: usageStats } = useUsageStats();
 
   const handleRouteChange = (route: AppRoute) => {
     setCurrentRoute(route);
@@ -30,19 +36,15 @@ const MainContent = () => {
   };
 
   const handleTTSSuccess = (audioUrl: string, voiceId: string, voiceName: string, text: string, speed: number) => {
-    const recording: Recording = {
-      id: `recording_${Date.now()}`,
-      audioUrl,
-      voiceId,
-      voiceName,
-      text,
-      speed,
-      timestamp: Date.now()
-    };
+    // Find the recording in the server data
+    const recording = recordingsData?.recordings?.find(r => 
+      r.voiceId === voiceId && r.text === text && r.speed === speed
+    );
     
-    setRecordings(prev => [recording, ...prev]);
-    setCurrentRecordingId(recording.id);
-    setCurrentRoute("recordings");
+    if (recording) {
+      setCurrentRecordingId(recording.recordingId);
+      setCurrentRoute("recordings");
+    }
   };
 
   const renderCurrentRoute = () => {
@@ -60,11 +62,14 @@ const MainContent = () => {
       case "recordings":
         return (
           <VoiceRecordingsRoute 
-            recordings={recordings}
+            recordings={recordingsData?.recordings || []}
             currentRecordingId={currentRecordingId}
             onRecordingSelect={(recordingId) => setCurrentRecordingId(recordingId)}
+            isLoading={recordingsLoading}
           />
         );
+      case "pricing":
+        return <SubscriptionPlans />;
       default:
         return <VoiceUploadRoute onUploadSuccess={handleUploadSuccess} />;
     }
@@ -105,6 +110,37 @@ const MainContent = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Show usage stats and upgrade prompts */}
+        {usageStats && usageStats.hasReachedLimit && (
+          <UpgradePrompt 
+            message={`You've used ${usageStats.recordingsUsed} of ${usageStats.recordingsLimit} recordings this month. Upgrade to continue generating voice recordings.`}
+          />
+        )}
+        
+        {/* Show subscription tier info */}
+        {userProfile && (
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  Current Plan: {userProfile.subscriptionTier}
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  {usageStats ? `${usageStats.recordingsUsed} / ${usageStats.recordingsLimit === -1 ? '∞' : usageStats.recordingsLimit} recordings used` : 'Loading usage...'}
+                </p>
+              </div>
+              {userProfile.subscriptionTier !== 'PREMIUM' && (
+                <button
+                  onClick={() => setCurrentRoute("pricing")}
+                  className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Upgrade
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        
         {renderCurrentRoute()}
       </div>
 

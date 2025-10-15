@@ -1,7 +1,21 @@
 // app/api/voices/route.ts
 import { NextResponse } from "next/server";
+import { getSession } from "../../lib/redis";
 
-export async function GET() {
+export async function GET(req: Request) {
+  // Check authentication
+  const sessionId = req.headers.get('cookie')?.split('sessionId=')[1]?.split(';')[0];
+  
+  if (!sessionId) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const sessionData = await getSession(sessionId);
+  
+  if (!sessionData) {
+    return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+  }
+
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "ELEVENLABS_API_KEY environment variable is not set" }, { status: 500 });

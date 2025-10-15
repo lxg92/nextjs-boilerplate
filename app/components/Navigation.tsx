@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export type AppRoute = "upload" | "generate" | "recordings";
+export type AppRoute = "upload" | "generate" | "recordings" | "pricing";
 
 interface NavigationProps {
   currentRoute: AppRoute;
@@ -83,6 +83,12 @@ const MobileMenu = ({
       label: "Voice Recordings",
       icon: "🎵",
       description: "Browse saved recordings"
+    },
+    {
+      id: "pricing" as AppRoute,
+      label: "Pricing",
+      icon: "💳",
+      description: "View subscription plans"
     }
   ];
 
@@ -201,6 +207,11 @@ const DesktopNavigation = ({
       id: "recordings" as AppRoute,
       label: "Voice Recordings",
       icon: "🎵"
+    },
+    {
+      id: "pricing" as AppRoute,
+      label: "Pricing",
+      icon: "💳"
     }
   ];
 

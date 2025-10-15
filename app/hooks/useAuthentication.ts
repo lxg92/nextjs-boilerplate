@@ -1,65 +1,87 @@
 import { useState, useEffect } from "react";
 
-export interface AuthData {
-  timestamp: number;
+export interface UserProfile {
+  userId: string;
+  email: string;
+  subscriptionTier: 'FREE' | 'BASIC' | 'PREMIUM';
+  subscriptionStatus: 'active' | 'canceled' | 'past_due' | 'trialing';
+  recordingsThisMonth: number;
+  features: {
+    allowAdvancedAudioControls: boolean;
+    allowCustomPresets: boolean;
+    availablePresets: string[];
+  };
 }
-
-const AUTH_STORAGE_KEY = 'voiceAppAuth';
-const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes
 
 export const useAuthentication = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Check authentication on mount
   useEffect(() => {
-    const checkAuth = () => {
-      const authData = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (authData) {
-        const { timestamp }: AuthData = JSON.parse(authData);
-        const now = Date.now();
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
         
-        if (now - timestamp < SESSION_DURATION) {
-          setIsAuthenticated(true);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.valid) {
+            setIsAuthenticated(true);
+            setUserProfile(data.user);
+          } else {
+            setIsAuthenticated(false);
+            setUserProfile(null);
+          }
         } else {
-          // Session expired, clear storage
-          localStorage.removeItem(AUTH_STORAGE_KEY);
+          setIsAuthenticated(false);
+          setUserProfile(null);
         }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+        setUserProfile(null);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     checkAuth();
   }, []);
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === "vip") {
-      setIsAuthenticated(true);
-      setPasswordError("");
-      // Store authentication with timestamp
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
-        timestamp: Date.now()
-      }));
-    } else {
-      setPasswordError("Incorrect password. Please try again.");
-      setPassword("");
+  const login = () => {
+    window.location.href = '/api/auth/login';
+  };
+
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setIsAuthenticated(false);
+      setUserProfile(null);
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    setIsAuthenticated(false);
-    setPassword("");
-    setPasswordError("");
+  const refreshProfile = async () => {
+    try {
+      const response = await fetch('/api/user/profile');
+      if (response.ok) {
+        const profile = await response.json();
+        setUserProfile(profile);
+      }
+    } catch (error) {
+      console.error('Profile refresh failed:', error);
+    }
   };
 
   return {
     isAuthenticated,
-    password,
-    setPassword,
-    passwordError,
-    handlePasswordSubmit,
-    logout
+    userProfile,
+    isLoading,
+    login,
+    logout,
+    refreshProfile,
   };
 };

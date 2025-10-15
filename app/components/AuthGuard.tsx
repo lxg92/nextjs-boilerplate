@@ -4,7 +4,12 @@ import { createContext, useContext } from "react";
 import { useAuthentication } from "../hooks/useAuthentication";
 
 interface AuthContextType {
+  isAuthenticated: boolean;
+  userProfile: any;
+  isLoading: boolean;
+  login: () => void;
   logout: () => void;
+  refreshProfile: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -20,12 +25,23 @@ export const useAuthContext = () => {
 export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const {
     isAuthenticated,
-    password,
-    setPassword,
-    passwordError,
-    handlePasswordSubmit,
-    logout
+    userProfile,
+    isLoading,
+    login,
+    logout,
+    refreshProfile
   } = useAuthentication();
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </main>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -36,36 +52,18 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
               Voice Cloning App
             </h1>
             <p className="text-gray-700 dark:text-gray-300 text-center mb-6">
-              Please enter the password to access this application.
+              Please sign in to access this application.
             </p>
             
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div>
-                <input
-                  type="password"
-                  placeholder="Enter password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
-                  autoFocus
-                />
-                {passwordError && (
-                  <p className="text-red-600 dark:text-red-400 text-sm mt-2 font-medium">
-                    {passwordError}
-                  </p>
-                )}
-              </div>
-              
-              <button
-                type="submit"
-                className="w-full bg-blue-600 dark:bg-blue-700 text-white py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                Access Application
-              </button>
-            </form>
+            <button
+              onClick={login}
+              className="w-full bg-blue-600 dark:bg-blue-700 text-white py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Sign In
+            </button>
             
             <p className="text-xs text-gray-600 dark:text-gray-400 text-center mt-4">
-              Session will remain active for 15 minutes
+              Secure authentication powered by Auth0
             </p>
           </div>
         </div>
@@ -74,7 +72,14 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      userProfile, 
+      isLoading, 
+      login, 
+      logout, 
+      refreshProfile 
+    }}>
       {children}
     </AuthContext.Provider>
   );

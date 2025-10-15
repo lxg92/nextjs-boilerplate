@@ -1,9 +1,23 @@
 // app/api/ivc/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "../../lib/redis";
 
 export const runtime = "nodejs"; // ensure Node runtime for FormData streaming
 
 export async function POST(req: NextRequest) {
+  // Check authentication
+  const sessionId = req.cookies.get('sessionId')?.value;
+  
+  if (!sessionId) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const sessionData = await getSession(sessionId);
+  
+  if (!sessionData) {
+    return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+  }
+
   const body = await req.formData();
   const name = body.get("name")?.toString() ?? "My IVC";
   const file = body.get("file");
