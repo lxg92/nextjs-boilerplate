@@ -1,5 +1,6 @@
 import { TIER_FEATURES } from '../types/subscription';
 import { AUDIO_PRESETS, AudioPreset } from '../utils/audioPresets';
+import { CustomPreset } from '../hooks/useCustomPresets';
 
 export const getFeatureFlags = (subscriptionTier: 'FREE' | 'BASIC' | 'PREMIUM') => {
   const features = TIER_FEATURES[subscriptionTier];
@@ -55,6 +56,20 @@ export const getFilteredPresets = (subscriptionTier: 'FREE' | 'BASIC' | 'PREMIUM
   return AUDIO_PRESETS.filter(preset => 
     availablePresets.includes(preset.name)
   );
+};
+
+// Get all available presets including custom ones
+export const getAllAvailablePresets = (
+  subscriptionTier: 'FREE' | 'BASIC' | 'PREMIUM',
+  customPresets: CustomPreset[] = []
+): (AudioPreset | CustomPreset)[] => {
+  const builtInPresets = getFilteredPresets(subscriptionTier);
+  
+  if (canCreateCustomPresets(subscriptionTier)) {
+    return [...builtInPresets, ...customPresets];
+  }
+  
+  return builtInPresets;
 };
 
 export const hasPriorityGeneration = (subscriptionTier: 'FREE' | 'BASIC' | 'PREMIUM') => {

@@ -105,3 +105,165 @@ body {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
 }
+
+/* Volume slider specific styles with yellow thumb */
+.volume-slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #f59e0b;
+  cursor: pointer;
+  border: 3px solid var(--background);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  background: #d97706;
+  transform: scale(1.05);
+}
+
+.volume-slider::-webkit-slider-thumb:focus {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.volume-slider::-webkit-slider-thumb:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.volume-slider::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #f59e0b;
+  cursor: pointer;
+  border: 3px solid var(--background);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.volume-slider::-moz-range-thumb:hover {
+  background: #d97706;
+  transform: scale(1.05);
+}
+
+.volume-slider::-moz-range-thumb:focus {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.volume-slider::-moz-range-thumb:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Left pan slider specific styles with lime thumb and lime progress */
+.left-pan-slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #84cc16;
+  cursor: pointer;
+  border: 3px solid var(--background);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.left-pan-slider::-webkit-slider-thumb:hover {
+  background: #65a30d;
+  transform: scale(1.05);
+}
+
+.left-pan-slider::-webkit-slider-thumb:focus {
+  outline: 2px solid #84cc16;
+  outline-offset: 2px;
+}
+
+.left-pan-slider::-webkit-slider-thumb:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.left-pan-slider::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #84cc16;
+  cursor: pointer;
+  border: 3px solid var(--background);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.left-pan-slider::-moz-range-thumb:hover {
+  background: #65a30d;
+  transform: scale(1.05);
+}
+
+.left-pan-slider::-moz-range-thumb:focus {
+  outline: 2px solid #84cc16;
+  outline-offset: 2px;
+}
+
+.left-pan-slider::-moz-range-thumb:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Right pan slider specific styles with red thumb and lime progress */
+.right-pan-slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #ef4444;
+  cursor: pointer;
+  border: 3px solid var(--background);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.right-pan-slider::-webkit-slider-thumb:hover {
+  background: #dc2626;
+  transform: scale(1.05);
+}
+
+.right-pan-slider::-webkit-slider-thumb:focus {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+}
+
+.right-pan-slider::-webkit-slider-thumb:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.right-pan-slider::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #ef4444;
+  cursor: pointer;
+  border: 3px solid var(--background);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.right-pan-slider::-moz-range-thumb:hover {
+  background: #dc2626;
+  transform: scale(1.05);
+}
+
+.right-pan-slider::-moz-range-thumb:focus {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+}
+
+.right-pan-slider::-moz-range-thumb:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}

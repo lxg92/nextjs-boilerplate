@@ -28,7 +28,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, SubscriptionFeatures> = {
     maxTextLength: 1500,
     allowAdvancedAudioControls: false,
     allowCustomPresets: false,
-    availablePresets: ['Mono', 'Stereo Separation', 'Cinematic Reverb', 'Delay Echo', 'Ambient Space', 'Wide Stereo'],
+    availablePresets: 'all',
     priorityGeneration: true,
     supportLevel: 'standard'
   },

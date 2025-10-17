@@ -6,8 +6,10 @@ import AudioControls from "./AudioControls";
 import { PlaybackProgress } from "./PlaybackProgress";
 import { AUDIO_PRESETS, AudioPreset } from "../utils/audioPresets";
 import { useTierEmulation } from "../contexts/TierEmulationContext";
-import { getFilteredPresets } from "../lib/feature-flags";
+import { getFilteredPresets, getAllAvailablePresets, canCreateCustomPresets } from "../lib/feature-flags";
 import { SubscriptionTier } from "../types/subscription";
+import { PresetManager } from './PresetManager';
+import { CustomPreset, useCustomPresets, isCustomPreset } from '../hooks/useCustomPresets';
 
 type Channel = "left" | "right";
 
@@ -144,25 +146,40 @@ const useChannelHandlers = (
 const PresetSelector = ({ 
   selectedPreset, 
   onPresetSelect,
-  actualTier
+  actualTier,
+  customPresets,
+  onOpenPresetManager
 }: { 
-  selectedPreset: AudioPreset | null;
+  selectedPreset: AudioPreset | CustomPreset | null;
   onPresetSelect: (presetName: string) => void;
   actualTier: SubscriptionTier;
+  customPresets: CustomPreset[];
+  onOpenPresetManager: () => void;
 }) => {
   const { getActiveTier } = useTierEmulation();
   const activeTier = getActiveTier();
-  const availablePresets = getFilteredPresets(activeTier);
+  const allPresets = getAllAvailablePresets(activeTier, customPresets);
   const presetSelectId = "presetSelect";
+  const canCreateCustom = canCreateCustomPresets(activeTier);
   
   return (
     <div className="mb-6">
-      <label
-        htmlFor={presetSelectId}
-        className="block text-sm font-medium mb-2 text-gray-900 dark:text-white"
-      >
-        Audio Presets:
-      </label>
+      <div className="flex justify-between items-center mb-2">
+        <label
+          htmlFor={presetSelectId}
+          className="block text-sm font-medium text-gray-900 dark:text-white"
+        >
+          Audio Presets:
+        </label>
+        {canCreateCustom && (
+          <button
+            onClick={onOpenPresetManager}
+            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            Manage Custom Presets
+          </button>
+        )}
+      </div>
       <select
         id={presetSelectId}
         aria-label="Audio Preset"
@@ -171,9 +188,9 @@ const PresetSelector = ({
         className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
       >
         <option value="">— Select a preset —</option>
-        {availablePresets.map((preset) => (
+        {allPresets.map((preset) => (
           <option key={preset.name} value={preset.name}>
-            {preset.name} - {preset.description}
+            {isCustomPreset(preset) ? '⭐ ' : ''}{preset.name} - {preset.description}
           </option>
         ))}
       </select>
@@ -323,7 +340,11 @@ export const AudioPlayer = ({ audioUrl, className = "", actualTier }: AudioPlaye
   const activeTier = getActiveTier();
   const isLocked = activeTier !== 'PREMIUM';
 
-  const [selectedPreset, setSelectedPreset] = useState<AudioPreset | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<AudioPreset | CustomPreset | null>(null);
+  const [showPresetManager, setShowPresetManager] = useState(false);
+  
+  // Custom preset management
+  const { customPresets } = useCustomPresets();
 
   // Custom hook for channel handlers
   const channelHandlers = useChannelHandlers(updateChannelConfig, state);
@@ -335,11 +356,21 @@ export const AudioPlayer = ({ audioUrl, className = "", actualTier }: AudioPlaye
   }, [audioUrl, setAudioSource]);
 
   const handlePresetSelect = (presetName: string) => {
-    const availablePresets = getFilteredPresets(activeTier);
-    const preset = availablePresets.find(p => p.name === presetName);
+    const allPresets = getAllAvailablePresets(activeTier, customPresets);
+    const preset = allPresets.find(p => p.name === presetName);
     if (!preset) return;
     setSelectedPreset(preset);
     applyPreset(preset.config);
+  };
+
+  const handleCustomPresetSelect = (preset: CustomPreset) => {
+    setSelectedPreset(preset);
+    applyPreset(preset.config);
+    setShowPresetManager(false);
+  };
+
+  const handlePresetManagerClose = () => {
+    setShowPresetManager(false);
   };
 
   if (!audioUrl) {
@@ -359,6 +390,8 @@ export const AudioPlayer = ({ audioUrl, className = "", actualTier }: AudioPlaye
           selectedPreset={selectedPreset}
           onPresetSelect={handlePresetSelect}
           actualTier={actualTier}
+          customPresets={customPresets}
+          onOpenPresetManager={() => setShowPresetManager(true)}
         />
 
         {/* Loop Control */}
@@ -439,6 +472,18 @@ export const AudioPlayer = ({ audioUrl, className = "", actualTier }: AudioPlaye
           presetRightChannel={selectedPreset?.config.rightChannel}
         />
       </div>
+      
+      {/* Preset Manager Modal */}
+      <PresetManager
+        isOpen={showPresetManager}
+        onClose={handlePresetManagerClose}
+        currentConfig={{
+          leftChannel: state.leftChannel,
+          rightChannel: state.rightChannel,
+          masterVolume: state.masterVolume,
+        }}
+        onPresetSelect={handleCustomPresetSelect}
+      />
     </div>
   );
 };

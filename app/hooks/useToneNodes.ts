@@ -137,10 +137,10 @@ export const useToneNodes = () => {
     player.fan(leftDelay, rightDelay);
     leftDelay.chain(leftReverb, leftGain, leftPan, masterGain);
     rightDelay.chain(rightReverb, rightGain, rightPan, masterGain);
-    leftOscillator.chain(leftOscGain, masterGain);
-    rightOscillator.chain(rightOscGain, masterGain);
-    leftNoise.chain(leftNoiseGain, masterGain);
-    rightNoise.chain(rightNoiseGain, masterGain);
+    leftOscillator.chain(leftOscGain, leftPan, masterGain);
+    rightOscillator.chain(rightOscGain, rightPan, masterGain);
+    leftNoise.chain(leftNoiseGain, leftPan, masterGain);
+    rightNoise.chain(rightNoiseGain, rightPan, masterGain);
     masterGain.toDestination();
 
     // Refs

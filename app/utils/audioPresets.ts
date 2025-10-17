@@ -23,7 +23,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -31,7 +31,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 100,
@@ -46,7 +46,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: -1,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -54,7 +54,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 1,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 100,
@@ -69,7 +69,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: -0.3,
         reverb: { enabled: true, roomSize: 8, wet: 0.4 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -77,7 +77,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0.3,
         reverb: { enabled: true, roomSize: 8, wet: 0.4 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 95,
@@ -92,7 +92,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: true, delayTime: "4n", feedback: 0.4, wet: 0.25 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -100,7 +100,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: true, delayTime: "4n", feedback: 0.4, wet: 0.25 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 105,
@@ -115,7 +115,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: -0.5,
         reverb: { enabled: true, roomSize: 6, wet: 0.5 },
         delay: { enabled: true, delayTime: "2n", feedback: 0.3, wet: 0.2 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -123,7 +123,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0.5,
         reverb: { enabled: true, roomSize: 6, wet: 0.5 },
         delay: { enabled: true, delayTime: "2n", feedback: 0.3, wet: 0.2 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 110,
@@ -138,7 +138,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: -0.7,
         reverb: { enabled: true, roomSize: 4, wet: 0.2 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -146,7 +146,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0.7,
         reverb: { enabled: true, roomSize: 4, wet: 0.2 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 275, wet: 0.5 },
+        frequency: { enabled: false, frequency: 260, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 100,
@@ -158,7 +158,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
     config: {
       leftChannel: {
         volume: 100,
-        pan: 0,
+        pan: -0.5,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
         frequency: { enabled: true, frequency: 250, wet: 0.3 },
@@ -166,7 +166,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
       },
       rightChannel: {
         volume: 100,
-        pan: 0,
+        pan: 0.5,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
         frequency: { enabled: true, frequency: 260, wet: 0.3 },
@@ -181,7 +181,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
     config: {
       leftChannel: {
         volume: 100,
-        pan: 0,
+        pan: -0.5,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
         frequency: { enabled: true, frequency: 150, wet: 0.4 },
@@ -189,7 +189,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
       },
       rightChannel: {
         volume: 100,
-        pan: 0,
+        pan: 0.5,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
         frequency: { enabled: true, frequency: 156, wet: 0.4 },
@@ -204,7 +204,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
     config: {
       leftChannel: {
         volume: 100,
-        pan: 0,
+        pan: -0.5,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
         frequency: { enabled: true, frequency: 300, wet: 0.25 },
@@ -212,7 +212,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
       },
       rightChannel: {
         volume: 100,
-        pan: 0,
+        pan: 0.5,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
         frequency: { enabled: true, frequency: 320, wet: 0.25 },
@@ -227,7 +227,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
     config: {
       leftChannel: {
         volume: 100,
-        pan: 0,
+        pan: -0.5,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
         frequency: { enabled: true, frequency: 75, wet: 0.5 },
@@ -235,7 +235,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
       },
       rightChannel: {
         volume: 100,
-        pan: 0,
+        pan: 0.5,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
         frequency: { enabled: true, frequency: 77, wet: 0.5 },
@@ -250,7 +250,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
     config: {
       leftChannel: {
         volume: 100,
-        pan: 0,
+        pan: -0.5,
         reverb: { enabled: true, roomSize: 4, wet: 0.2 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
         frequency: { enabled: true, frequency: 50, wet: 0.2 },
@@ -258,7 +258,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
       },
       rightChannel: {
         volume: 100,
-        pan: 0,
+        pan: 0.5,
         reverb: { enabled: true, roomSize: 4, wet: 0.2 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
         frequency: { enabled: true, frequency: 54, wet: 0.2 },
