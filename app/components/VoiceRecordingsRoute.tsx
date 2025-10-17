@@ -2,6 +2,7 @@
 
 import { Recording } from "../types";
 import { AudioPlayer } from "./AudioPlayer";
+import { useTierEmulation } from "../contexts/TierEmulationContext";
 
 interface VoiceRecordingsRouteProps {
   recordings: Recording[];
@@ -24,6 +25,7 @@ export const VoiceRecordingsRoute = ({
   currentRecordingId, 
   onRecordingSelect 
 }: VoiceRecordingsRouteProps) => {
+  const { actualTier } = useTierEmulation();
   const currentRecording = recordings.find(r => r.id === currentRecordingId);
 
   if (recordings.length === 0) {
@@ -149,7 +151,7 @@ export const VoiceRecordingsRoute = ({
             </div>
 
             {/* Audio Player Component */}
-            <AudioPlayer audioUrl={currentRecording.audioUrl} />
+            <AudioPlayer audioUrl={currentRecording.audioUrl} actualTier={actualTier} />
           </div>
         )}
       </div>

@@ -3,11 +3,14 @@
 import { useState, useEffect } from "react";
 import { useVoiceManagement } from "../hooks/useVoiceManagement";
 import { useTTSGeneration } from "../hooks/useTTSGeneration";
+import { useTierEmulation } from "../contexts/TierEmulationContext";
+import { getMaxTextLength } from "../lib/feature-flags";
+import { SubscriptionTier } from "../types/subscription";
 
 const DEFAULT_TEXTS = [
   "Hello, this is a test of the voice cloning system.",
   "Hello, this is a test of the voice cloning system. Welcome to our demonstration of text-to-speech technology. This is a sample text to showcase the voice synthesis capabilities. Thank you for using our voice cloning application today.",
-  "Large sums of money come to me easily and quickly, in increasing quantities, from multiple sources, on a continuous basis, in the best interest of all, that I get to keep",
+  "Large sums of money come to me easily and quickly, -- in increasing quantities, -- from multiple sources, -- on a continuous basis, -- in the best interest of all, -- that I get to keep",
 ];
 
 interface VoiceSelectionRouteProps {
@@ -45,6 +48,12 @@ export const VoiceSelectionRoute = ({
     handleCustomTextChange
   } = useTTSGeneration(onTTSSuccess, selectedVoice);
 
+  // Use tier emulation context
+  const { getActiveTier, canGenerateScript, scriptsGeneratedThisSession, getMaxScripts } = useTierEmulation();
+  const activeTier = getActiveTier();
+  const maxTextLength = getMaxTextLength(activeTier);
+  const canGenerate = canGenerateScript();
+
   // Initialize selected voice if provided
   useEffect(() => {
     if (initialSelectedVoiceId && initialSelectedVoiceId !== selectedVoiceId) {
@@ -57,7 +66,7 @@ export const VoiceSelectionRoute = ({
     onVoiceSelect?.(voiceId);
   };
 
-  const canSpeak = canGenerateSpeech(selectedVoiceId, ttsMutation.isPending);
+  const canSpeak = canGenerateSpeech(selectedVoiceId, ttsMutation.isPending) && canGenerate;
 
   return (
     <div className="space-y-6">
@@ -69,6 +78,10 @@ export const VoiceSelectionRoute = ({
         <p className="text-gray-600 dark:text-gray-400">
           Select a voice and create text-to-speech audio
         </p>
+        {/* Usage Counter */}
+        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          Scripts generated this session: {scriptsGeneratedThisSession} / {getMaxScripts()}
+        </div>
       </div>
 
       <div className="max-w-4xl mx-auto space-y-6">
@@ -175,7 +188,7 @@ export const VoiceSelectionRoute = ({
               {/* Text Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                  Choose default text or enter custom:
+                  Choose default text{maxTextLength > 0 ? ' or enter custom:' : ':'}
                 </label>
                 <select
                   className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-3 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
@@ -191,33 +204,36 @@ export const VoiceSelectionRoute = ({
                 </select>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                  Custom text (max 2500 characters):
-                </label>
-                <textarea
-                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-3 rounded-lg h-32 resize-none focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
-                  placeholder="Enter your text here... Use -, --, --- for pauses."
-                  value={customText}
-                  onChange={(e) => handleCustomTextChange(e.target.value)}
-                  maxLength={2500}
-                />
-                <div className="mt-2 flex justify-between items-center">
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
-                    <span className="font-medium">Pauses:</span> 
-                    <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded mx-1">-</code> (0.5s), 
-                    <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded mx-1">--</code> (1s), 
-                    <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded mx-1">---</code> (3s)
+              {/* Custom Text Input - Only show for BASIC and PREMIUM */}
+              {maxTextLength > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    Custom text (max {maxTextLength} characters):
+                  </label>
+                  <textarea
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-3 rounded-lg h-32 resize-none focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
+                    placeholder="Enter your text here... Use -, --, --- for pauses."
+                    value={customText}
+                    onChange={(e) => handleCustomTextChange(e.target.value)}
+                    maxLength={maxTextLength}
+                  />
+                  <div className="mt-2 flex justify-between items-center">
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                      <span className="font-medium">Pauses:</span> 
+                      <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded mx-1">-</code> (0.5s), 
+                      <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded mx-1">--</code> (1s), 
+                      <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded mx-1">---</code> (3s)
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      customText.length > maxTextLength ? 'text-red-600 dark:text-red-400' : 
+                      customText.length > maxTextLength * 0.9 ? 'text-yellow-600 dark:text-yellow-400' : 
+                      'text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {customText.length}/{maxTextLength}
+                    </span>
                   </div>
-                  <span className={`text-xs font-medium ${
-                    customText.length > 2500 ? 'text-red-600 dark:text-red-400' : 
-                    customText.length > 2250 ? 'text-yellow-600 dark:text-yellow-400' : 
-                    'text-gray-600 dark:text-gray-400'
-                  }`}>
-                    {customText.length}/2500
-                  </span>
                 </div>
-              </div>
+              )}
               
               {/* Speed Control */}
               <div>
@@ -260,6 +276,8 @@ export const VoiceSelectionRoute = ({
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                     Generating Speech...
                   </div>
+                ) : !canGenerate ? (
+                  `Script Limit Reached (${scriptsGeneratedThisSession}/${getMaxScripts()})`
                 ) : (
                   "Generate Speech"
                 )}
@@ -270,6 +288,15 @@ export const VoiceSelectionRoute = ({
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                   <p className="text-red-600 dark:text-red-400 text-sm font-medium">
                     {(ttsMutation.error as Error).message}
+                  </p>
+                </div>
+              )}
+
+              {/* Script Limit Warning */}
+              {!canGenerate && (
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <p className="text-yellow-600 dark:text-yellow-400 text-sm font-medium">
+                    You've reached your script generation limit for this session. Switch tiers to reset the counter.
                   </p>
                 </div>
               )}

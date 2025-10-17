@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useTierEmulation } from "../contexts/TierEmulationContext";
+import { SubscriptionTier } from "../types/subscription";
 
 export type AppRoute = "upload" | "generate" | "recordings";
 
@@ -14,6 +16,63 @@ interface HamburgerMenuProps {
   isOpen: boolean;
   onToggle: () => void;
 }
+
+// Tier Dropdown Component
+const TierDropdown = () => {
+  const { emulatedTier, actualTier, setEmulatedTier, scriptsGeneratedThisSession } = useTierEmulation();
+  
+  const activeTier = emulatedTier || actualTier;
+  const isEmulated = emulatedTier !== null;
+  
+  const handleTierChange = (tier: string) => {
+    if (tier === 'actual') {
+      setEmulatedTier(null);
+    } else {
+      setEmulatedTier(tier as SubscriptionTier);
+    }
+  };
+
+  const getTierDisplayName = (tier: SubscriptionTier) => {
+    switch (tier) {
+      case 'FREE': return 'Free';
+      case 'BASIC': return 'Basic';
+      case 'PREMIUM': return 'Premium';
+      default: return tier;
+    }
+  };
+
+  const getTierColor = (tier: SubscriptionTier) => {
+    switch (tier) {
+      case 'FREE': return 'text-gray-600 dark:text-gray-400';
+      case 'BASIC': return 'text-blue-600 dark:text-blue-400';
+      case 'PREMIUM': return 'text-purple-600 dark:text-purple-400';
+      default: return 'text-gray-600 dark:text-gray-400';
+    }
+  };
+
+  return (
+    <div className="flex items-center space-x-2">
+      <div className="text-xs text-gray-500 dark:text-gray-400">
+        Scripts: {scriptsGeneratedThisSession}
+      </div>
+      <select
+        value={isEmulated ? emulatedTier : 'actual'}
+        onChange={(e) => handleTierChange(e.target.value)}
+        className={`text-sm font-medium px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${getTierColor(activeTier)}`}
+      >
+        <option value="actual">Actual: {getTierDisplayName(actualTier)}</option>
+        <option value="FREE">Emulate: Free</option>
+        <option value="BASIC">Emulate: Basic</option>
+        <option value="PREMIUM">Emulate: Premium</option>
+      </select>
+      {isEmulated && (
+        <span className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded">
+          Emulating
+        </span>
+      )}
+    </div>
+  );
+};
 
 const HamburgerIcon = ({ isOpen }: { isOpen: boolean }) => (
   <svg
@@ -123,6 +182,14 @@ const MobileMenu = ({
             </button>
           </div>
 
+          {/* Tier Emulation */}
+          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+              Tier Emulation
+            </h3>
+            <TierDropdown />
+          </div>
+
           {/* Navigation items */}
           <nav className="space-y-2">
             {menuItems.map((item) => (
@@ -181,7 +248,7 @@ const MobileMenu = ({
 
 const DesktopNavigation = ({ 
   currentRoute, 
-  onRouteChange 
+  onRouteChange
 }: {
   currentRoute: AppRoute;
   onRouteChange: (route: AppRoute) => void;
@@ -205,22 +272,25 @@ const DesktopNavigation = ({
   ];
 
   return (
-    <nav className="hidden md:flex md:space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-      {menuItems.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => onRouteChange(item.id)}
-          className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            currentRoute === item.id
-              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700"
-          }`}
-        >
-          <span className="mr-2" aria-hidden="true">{item.icon}</span>
-          {item.label}
-        </button>
-      ))}
-    </nav>
+    <div className="hidden md:flex md:items-center md:space-x-4">
+      <nav className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+        {menuItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => onRouteChange(item.id)}
+            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              currentRoute === item.id
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700"
+            }`}
+          >
+            <span className="mr-2" aria-hidden="true">{item.icon}</span>
+            {item.label}
+          </button>
+        ))}
+      </nav>
+      <TierDropdown />
+    </div>
   );
 };
 
@@ -244,7 +314,7 @@ export const Navigation = ({ currentRoute, onRouteChange, onLogout }: Navigation
         />
         <DesktopNavigation 
           currentRoute={currentRoute} 
-          onRouteChange={onRouteChange} 
+          onRouteChange={onRouteChange}
         />
       </div>
       

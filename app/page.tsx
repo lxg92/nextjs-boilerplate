@@ -7,6 +7,8 @@ import { VoiceUploadRoute } from "./components/VoiceUploadRoute";
 import { VoiceSelectionRoute } from "./components/VoiceSelectionRoute";
 import { VoiceRecordingsRoute } from "./components/VoiceRecordingsRoute";
 import { Recording } from "./types";
+import { TierEmulationProvider } from "./contexts/TierEmulationContext";
+import { SubscriptionTier } from "./types/subscription";
 
 const MainContent = () => {
   const { logout } = useAuthContext();
@@ -14,6 +16,9 @@ const MainContent = () => {
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [currentRecordingId, setCurrentRecordingId] = useState<string | null>(null);
+
+  // TODO: Replace with actual user subscription tier from authentication/API
+  const actualTier: SubscriptionTier = 'PREMIUM';
 
   const handleRouteChange = (route: AppRoute) => {
     setCurrentRoute(route);
@@ -125,9 +130,14 @@ const MainContent = () => {
 };
 
 export default function Page() {
+  // TODO: Replace with actual user subscription tier from authentication/API
+  const actualTier: SubscriptionTier = 'PREMIUM';
+  
   return (
     <AuthGuard>
-      <MainContent />
+      <TierEmulationProvider actualTier={actualTier}>
+        <MainContent />
+      </TierEmulationProvider>
     </AuthGuard>
   );
 }

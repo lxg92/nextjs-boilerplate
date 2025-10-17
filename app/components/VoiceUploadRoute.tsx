@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useVoiceManagement } from "../hooks/useVoiceManagement";
+import { useTierEmulation } from "../contexts/TierEmulationContext";
+import { getMaxVoices } from "../lib/feature-flags";
+import { SubscriptionTier } from "../types/subscription";
 
 interface VoiceUploadRouteProps {
   onUploadSuccess?: (voiceId: string) => void;
@@ -11,9 +14,15 @@ export const VoiceUploadRoute = ({ onUploadSuccess }: VoiceUploadRouteProps) => 
   const [file, setFile] = useState<File | null>(null);
   const [voiceName, setVoiceName] = useState("My IVC");
 
-  const { createVoiceMutation } = useVoiceManagement();
+  const { createVoiceMutation, voices } = useVoiceManagement();
+  const { getActiveTier } = useTierEmulation();
+  
+  const activeTier = getActiveTier();
+  const maxVoices = getMaxVoices(activeTier);
+  const currentVoiceCount = voices.length;
+  const isAtLimit = currentVoiceCount >= maxVoices;
 
-  const canCreate = !!file && !createVoiceMutation.isPending;
+  const canCreate = !!file && !createVoiceMutation.isPending && !isAtLimit;
 
   const handleCreateVoice = () => {
     if (file) {
@@ -47,6 +56,23 @@ export const VoiceUploadRoute = ({ onUploadSuccess }: VoiceUploadRouteProps) => 
 
       {/* Upload Section */}
       <div className="max-w-2xl mx-auto">
+        {/* Voice Count Display */}
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                Voice Limit: {currentVoiceCount} / {maxVoices}
+              </h3>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                {isAtLimit ? 'You\'ve reached your voice limit' : `${maxVoices - currentVoiceCount} voices remaining`}
+              </p>
+            </div>
+            {isAtLimit && (
+              <div className="text-2xl">🔒</div>
+            )}
+          </div>
+        </div>
+
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
             Voice Sample Upload
@@ -116,10 +142,21 @@ export const VoiceUploadRoute = ({ onUploadSuccess }: VoiceUploadRouteProps) => 
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                   Creating Voice Clone...
                 </div>
+              ) : isAtLimit ? (
+                `Voice Limit Reached (${currentVoiceCount}/${maxVoices})`
               ) : (
                 "Create Voice Clone"
               )}
             </button>
+            
+            {/* Voice Limit Warning */}
+            {isAtLimit && (
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-yellow-600 dark:text-yellow-400 text-sm font-medium">
+                  You've reached your voice limit ({currentVoiceCount}/{maxVoices}). Delete a voice to upload a new one, or upgrade your tier.
+                </p>
+              </div>
+            )}
             
             {/* Error Message */}
             {createVoiceMutation.isError && (

@@ -5,12 +5,16 @@ import { useAudioProcessing } from "../hooks/useAudioProcessing";
 import AudioControls from "./AudioControls";
 import { PlaybackProgress } from "./PlaybackProgress";
 import { AUDIO_PRESETS, AudioPreset } from "../utils/audioPresets";
+import { useTierEmulation } from "../contexts/TierEmulationContext";
+import { getFilteredPresets } from "../lib/feature-flags";
+import { SubscriptionTier } from "../types/subscription";
 
 type Channel = "left" | "right";
 
 interface AudioPlayerProps {
   audioUrl: string | null;
   className?: string;
+  actualTier: SubscriptionTier;
 }
 
 interface ChannelHandlers {
@@ -139,11 +143,16 @@ const useChannelHandlers = (
 // Preset selection component
 const PresetSelector = ({ 
   selectedPreset, 
-  onPresetSelect 
+  onPresetSelect,
+  actualTier
 }: { 
   selectedPreset: AudioPreset | null;
   onPresetSelect: (presetName: string) => void;
+  actualTier: SubscriptionTier;
 }) => {
+  const { getActiveTier } = useTierEmulation();
+  const activeTier = getActiveTier();
+  const availablePresets = getFilteredPresets(activeTier);
   const presetSelectId = "presetSelect";
   
   return (
@@ -162,7 +171,7 @@ const PresetSelector = ({
         className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
       >
         <option value="">— Select a preset —</option>
-        {AUDIO_PRESETS.map((preset) => (
+        {availablePresets.map((preset) => (
           <option key={preset.name} value={preset.name}>
             {preset.name} - {preset.description}
           </option>
@@ -295,7 +304,7 @@ const MasterVolumeControl = ({
   );
 };
 
-export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
+export const AudioPlayer = ({ audioUrl, className = "", actualTier }: AudioPlayerProps) => {
   const {
     state,
     updateChannelConfig,
@@ -310,6 +319,10 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
     isLoading,
   } = useAudioProcessing();
 
+  const { getActiveTier } = useTierEmulation();
+  const activeTier = getActiveTier();
+  const isLocked = activeTier !== 'PREMIUM';
+
   const [selectedPreset, setSelectedPreset] = useState<AudioPreset | null>(null);
 
   // Custom hook for channel handlers
@@ -322,7 +335,8 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
   }, [audioUrl, setAudioSource]);
 
   const handlePresetSelect = (presetName: string) => {
-    const preset = AUDIO_PRESETS.find(p => p.name === presetName);
+    const availablePresets = getFilteredPresets(activeTier);
+    const preset = availablePresets.find(p => p.name === presetName);
     if (!preset) return;
     setSelectedPreset(preset);
     applyPreset(preset.config);
@@ -344,6 +358,7 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
         <PresetSelector 
           selectedPreset={selectedPreset}
           onPresetSelect={handlePresetSelect}
+          actualTier={actualTier}
         />
 
         {/* Loop Control */}
@@ -419,6 +434,9 @@ export const AudioPlayer = ({ audioUrl, className = "" }: AudioPlayerProps) => {
           onRightNoiseToggle={(enabled) => channelHandlers.onNoiseToggle("right", enabled)}
           onLeftNoiseChange={(params) => channelHandlers.onNoiseChange("left", params)}
           onRightNoiseChange={(params) => channelHandlers.onNoiseChange("right", params)}
+          isLocked={isLocked}
+          presetLeftChannel={selectedPreset?.config.leftChannel}
+          presetRightChannel={selectedPreset?.config.rightChannel}
         />
       </div>
     </div>

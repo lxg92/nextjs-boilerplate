@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { TTSRequest } from "../types";
+import { useTierEmulation } from "../contexts/TierEmulationContext";
 
 export const useTTSGeneration = (onSuccess?: (audioUrl: string, voiceId: string, voiceName: string, text: string, speed: number) => void, selectedVoice?: { voice_id: string; name: string } | null) => {
   const [customText, setCustomText] = useState("");
   const [selectedDefaultText, setSelectedDefaultText] = useState("");
   const [speechSpeed, setSpeechSpeed] = useState(1.0);
+
+  const { incrementScriptCount } = useTierEmulation();
 
   // TTS generation mutation
   const ttsMutation = useMutation({
@@ -31,6 +34,9 @@ export const useTTSGeneration = (onSuccess?: (audioUrl: string, voiceId: string,
       return URL.createObjectURL(blob);
     },
     onSuccess: (url, variables) => {
+      // Increment script count after successful generation
+      incrementScriptCount();
+      
       // Call the external success callback with all necessary data
       if (onSuccess) {
         const voiceName = selectedVoice?.name || "";

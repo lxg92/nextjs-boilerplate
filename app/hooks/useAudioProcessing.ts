@@ -66,7 +66,7 @@ const DEFAULT_CHANNEL_CONFIG: ChannelConfig = {
   },
   frequency: {
     enabled: false,
-    frequency: 500, // Middle of 100-1000Hz range
+    frequency: 275, // Middle of 50-500Hz range
     wet: 0.5,
   },
   noise: {

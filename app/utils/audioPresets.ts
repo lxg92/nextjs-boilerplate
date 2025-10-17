@@ -23,7 +23,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -31,7 +31,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 100,
@@ -46,7 +46,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: -1,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -54,7 +54,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 1,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 100,
@@ -69,7 +69,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: -0.3,
         reverb: { enabled: true, roomSize: 8, wet: 0.4 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -77,7 +77,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0.3,
         reverb: { enabled: true, roomSize: 8, wet: 0.4 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 95,
@@ -92,7 +92,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: true, delayTime: "4n", feedback: 0.4, wet: 0.25 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -100,7 +100,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: true, delayTime: "4n", feedback: 0.4, wet: 0.25 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 105,
@@ -115,7 +115,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: -0.5,
         reverb: { enabled: true, roomSize: 6, wet: 0.5 },
         delay: { enabled: true, delayTime: "2n", feedback: 0.3, wet: 0.2 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -123,7 +123,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0.5,
         reverb: { enabled: true, roomSize: 6, wet: 0.5 },
         delay: { enabled: true, delayTime: "2n", feedback: 0.3, wet: 0.2 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 110,
@@ -138,7 +138,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: -0.7,
         reverb: { enabled: true, roomSize: 4, wet: 0.2 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -146,7 +146,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0.7,
         reverb: { enabled: true, roomSize: 4, wet: 0.2 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: false, frequency: 500, wet: 0.5 },
+        frequency: { enabled: false, frequency: 275, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 100,
@@ -154,14 +154,14 @@ export const AUDIO_PRESETS: AudioPreset[] = [
   },
   {
     name: "Alpha Binaural Beat",
-    description: "10Hz binaural beat for relaxation and focus (500Hz vs 510Hz)",
+    description: "10Hz binaural beat for relaxation and focus (250Hz vs 260Hz)",
     config: {
       leftChannel: {
         volume: 100,
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: true, frequency: 500, wet: 0.3 },
+        frequency: { enabled: true, frequency: 250, wet: 0.3 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -169,7 +169,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: true, frequency: 510, wet: 0.3 },
+        frequency: { enabled: true, frequency: 260, wet: 0.3 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 100,
@@ -177,14 +177,14 @@ export const AUDIO_PRESETS: AudioPreset[] = [
   },
   {
     name: "Theta Binaural Beat",
-    description: "6Hz binaural beat for deep meditation (300Hz vs 306Hz)",
+    description: "6Hz binaural beat for deep meditation (150Hz vs 156Hz)",
     config: {
       leftChannel: {
         volume: 100,
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: true, frequency: 300, wet: 0.4 },
+        frequency: { enabled: true, frequency: 150, wet: 0.4 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -192,7 +192,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: true, frequency: 306, wet: 0.4 },
+        frequency: { enabled: true, frequency: 156, wet: 0.4 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 100,
@@ -200,14 +200,14 @@ export const AUDIO_PRESETS: AudioPreset[] = [
   },
   {
     name: "Beta Binaural Beat",
-    description: "20Hz binaural beat for alertness and concentration (600Hz vs 620Hz)",
+    description: "20Hz binaural beat for alertness and concentration (300Hz vs 320Hz)",
     config: {
       leftChannel: {
         volume: 100,
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: true, frequency: 600, wet: 0.25 },
+        frequency: { enabled: true, frequency: 300, wet: 0.25 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -215,7 +215,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: true, frequency: 620, wet: 0.25 },
+        frequency: { enabled: true, frequency: 320, wet: 0.25 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 100,
@@ -223,14 +223,14 @@ export const AUDIO_PRESETS: AudioPreset[] = [
   },
   {
     name: "Delta Binaural Beat",
-    description: "2Hz binaural beat for deep sleep (150Hz vs 152Hz)",
+    description: "2Hz binaural beat for deep sleep (75Hz vs 77Hz)",
     config: {
       leftChannel: {
         volume: 100,
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: true, frequency: 150, wet: 0.5 },
+        frequency: { enabled: true, frequency: 75, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       rightChannel: {
@@ -238,7 +238,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: false, roomSize: 3, wet: 0.3 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: true, frequency: 152, wet: 0.5 },
+        frequency: { enabled: true, frequency: 77, wet: 0.5 },
         noise: { enabled: false, type: "white", wet: 0.3 },
       },
       masterVolume: 100,
@@ -246,14 +246,14 @@ export const AUDIO_PRESETS: AudioPreset[] = [
   },
   {
     name: "Brown Noise Ambience",
-    description: "Brown noise with subtle binaural beat for deep relaxation (100Hz vs 104Hz)",
+    description: "Brown noise with subtle binaural beat for deep relaxation (50Hz vs 54Hz)",
     config: {
       leftChannel: {
         volume: 100,
         pan: 0,
         reverb: { enabled: true, roomSize: 4, wet: 0.2 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: true, frequency: 100, wet: 0.2 },
+        frequency: { enabled: true, frequency: 50, wet: 0.2 },
         noise: { enabled: true, type: "brown", wet: 0.4 },
       },
       rightChannel: {
@@ -261,7 +261,7 @@ export const AUDIO_PRESETS: AudioPreset[] = [
         pan: 0,
         reverb: { enabled: true, roomSize: 4, wet: 0.2 },
         delay: { enabled: false, delayTime: "8n", feedback: 0.3, wet: 0.3 },
-        frequency: { enabled: true, frequency: 104, wet: 0.2 },
+        frequency: { enabled: true, frequency: 54, wet: 0.2 },
         noise: { enabled: true, type: "brown", wet: 0.4 },
       },
       masterVolume: 100,
