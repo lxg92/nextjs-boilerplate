@@ -66,10 +66,33 @@ const ChannelPanel = ({
   // Use preset values when locked, otherwise use current config
   const displayConfig = isLocked && presetConfig ? presetConfig : config;
   
-  // Calculate cross-channel frequency display
-  const getFrequencyDisplay = () => {
+  // Brainwave frequency range mapping
+  const getBrainwaveRange = (difference: number) => {
+    if (difference >= 0.5 && difference <= 3.9) {
+      return { name: 'Delta', color: '#fc4242' };
+    } else if (difference >= 4 && difference <= 7.9) {
+      return { name: 'Theta', color: '#fca542' };
+    } else if (difference >= 8 && difference <= 11.9) {
+      return { name: 'Alpha', color: '#a3fa52' };
+    } else if (difference >= 12 && difference <= 14.9) {
+      return { name: 'Low Beta', color: '#52e6fa' };
+    } else if (difference >= 15 && difference <= 17.9) {
+      return { name: 'Mid Beta', color: '#5293fa' };
+    } else if (difference >= 18 && difference <= 29.9) {
+      return { name: 'High Beta', color: '#3c3ffa' };
+    } else if (difference >= 30 && difference <= 100) {
+      return { name: 'Gamma', color: '#ce3cfa' };
+    }
+    return null; // Above 100Hz or below 0.5Hz, no indicator
+  };
+
+  // Calculate cross-channel frequency display with brainwave range
+  const getFrequencyDisplayComponents = () => {
     if (!otherChannelConfig || !displayConfig.frequency.enabled || !otherChannelConfig.frequency.enabled) {
-      return `Frequency: ${displayConfig.frequency.frequency}Hz`;
+      return {
+        baseText: `Frequency: ${displayConfig.frequency.frequency}Hz`,
+        brainwaveRange: null
+      };
     }
     
     const currentFreq = displayConfig.frequency.frequency;
@@ -87,7 +110,13 @@ const ChannelPanel = ({
       return diff % 1 === 0 ? diff.toString() : diff.toFixed(1);
     };
     
-    return `Frequency: ${formatFreq(currentFreq)}Hz vs ${formatFreq(otherFreq)}Hz (${formatDiff(difference)}Hz${isHigher ? '+' : '-'})`;
+    const brainwaveRange = getBrainwaveRange(difference);
+    const baseText = `Frequency: ${formatFreq(currentFreq)}Hz vs ${formatFreq(otherFreq)}Hz (${formatDiff(difference)}Hz${isHigher ? '+' : '-'})`;
+    
+    return {
+      baseText,
+      brainwaveRange
+    };
   };
   
   return (
@@ -307,7 +336,9 @@ const ChannelPanel = ({
           : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'
       }`}>
         <div className="flex items-center justify-between mb-3">
-          <label className={`text-sm font-medium ${isLocked ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>Frequency (Binaural Beat)</label>
+          <label className={`text-sm font-medium ${isLocked ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+            Frequency{displayConfig.frequency.enabled && otherChannelConfig?.frequency.enabled ? ' (Binaural Beat)' : ''}
+          </label>
           <input
             type="checkbox"
             checked={displayConfig.frequency.enabled}
@@ -321,7 +352,19 @@ const ChannelPanel = ({
           <div className="space-y-3">
             <div>
               <label className={`block text-xs mb-1 ${isLocked ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                {getFrequencyDisplay()}
+                {(() => {
+                  const { baseText, brainwaveRange } = getFrequencyDisplayComponents();
+                  return (
+                    <span>
+                      {baseText}
+                      {brainwaveRange && (
+                        <span style={{ color: brainwaveRange.color }} className="ml-1">
+                          ({brainwaveRange.name})
+                        </span>
+                      )}
+                    </span>
+                  );
+                })()}
               </label>
                <input
                  type="range"
