@@ -185,7 +185,7 @@ const PresetSelector = ({
         aria-label="Audio Preset"
         value={selectedPreset?.name || ""}
         onChange={(e) => onPresetSelect(e.target.value)}
-        className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
+        className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded w-full text-center md:text-left focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
       >
         <option value="">— Select a preset —</option>
         {allPresets.map((preset) => (
@@ -263,7 +263,7 @@ const PlaybackControls = ({
               clipRule="evenodd"
             />
           </svg>
-          Play Audio
+          Play
         </>
       )}
     </button>
@@ -331,8 +331,6 @@ export const AudioPlayer = ({ audioUrl, className = "", actualTier }: AudioPlaye
     handlePlay,
     handleStop,
     toggleLoop,
-    testOscillators,
-    debugState,
     isLoading,
   } = useAudioProcessing();
 
@@ -381,7 +379,7 @@ export const AudioPlayer = ({ audioUrl, className = "", actualTier }: AudioPlaye
     <div className={`space-y-4 ${className}`}>
       {/* Audio Controls */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-800">
-        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white text-center md:text-left">
           Audio Playback & Channel Control
         </h3>
 
@@ -425,23 +423,6 @@ export const AudioPlayer = ({ audioUrl, className = "", actualTier }: AudioPlaye
           onVolumeChange={updateMasterVolume}
         />
 
-        {/* Test Buttons - Only visible in development */}
-        {process.env.NODE_ENV !== 'production' && (
-          <div className="mb-6 flex items-center justify-center gap-4">
-            <button
-              onClick={testOscillators}
-              className="px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
-            >
-              Test Oscillators (3s)
-            </button>
-            <button
-              onClick={debugState}
-              className="px-4 py-2 bg-orange-600 dark:bg-orange-700 text-white rounded-lg hover:bg-orange-700 dark:hover:bg-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors"
-            >
-              Debug State
-            </button>
-          </div>
-        )}
 
         {/* Channel Controls */}
         <AudioControls

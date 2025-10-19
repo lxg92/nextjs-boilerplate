@@ -293,48 +293,6 @@ export const useAudioProcessing = () => {
     cleanup();
   }, [cleanup]);
 
-  // Test oscillators function - temporarily enables independent effects
-  const testOscillators = useCallback(async () => {
-    if (Tone.context.state !== "running") {
-      await Tone.start();
-    }
-    
-    // Temporarily enable oscillators for testing
-    if (leftOscillatorRef.current && rightOscillatorRef.current && 
-        leftOscGainRef.current && rightOscGainRef.current) {
-      
-      // Start oscillators
-      try { leftOscillatorRef.current.start(); } catch {}
-      try { rightOscillatorRef.current.start(); } catch {}
-      
-      // Enable oscillators
-      leftOscGainRef.current.gain.value = 0.3;
-      rightOscGainRef.current.gain.value = 0.3;
-      
-      // Stop and disable after 3 seconds
-      setTimeout(() => {
-        try { leftOscillatorRef.current?.stop(); } catch {}
-        try { rightOscillatorRef.current?.stop(); } catch {}
-        if (leftOscGainRef.current) leftOscGainRef.current.gain.value = 0;
-        if (rightOscGainRef.current) rightOscGainRef.current.gain.value = 0;
-      }, 3000);
-    }
-  }, [leftOscillatorRef, rightOscillatorRef, leftOscGainRef, rightOscGainRef]);
-
-  // Debug state function
-  const debugState = useCallback(() => {
-    console.log("=== Audio Processing State Debug ===");
-    console.log("Current State:", state);
-    console.log("Audio URL:", audioUrl);
-    console.log("Player Loaded:", playerRef.current?.loaded);
-    console.log("Tone Context State:", Tone.context.state);
-    console.log("Left Oscillator:", leftOscillatorRef.current);
-    console.log("Right Oscillator:", rightOscillatorRef.current);
-    console.log("Left Noise:", leftNoiseRef.current);
-    console.log("Right Noise:", rightNoiseRef.current);
-    console.log("Master Gain:", masterGainRef.current);
-    console.log("=====================================");
-  }, [state, audioUrl, playerRef, leftOscillatorRef, rightOscillatorRef, leftNoiseRef, rightNoiseRef, masterGainRef]);
 
   // Effect to recreate chain when audio URL changes
   useEffect(() => {
@@ -361,8 +319,6 @@ export const useAudioProcessing = () => {
     handlePlay,
     handleStop,
     toggleLoop,
-    testOscillators,
-    debugState,
     isLoading: state.isLoading,
     // Visualizer removed
   };

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { ChannelConfig } from "../hooks/useAudioProcessing";
 
 interface AudioControlsProps {
@@ -121,8 +122,8 @@ const ChannelPanel = ({
   
   return (
     <div className={`flex-1 space-y-4 relative ${isLocked ? 'opacity-60' : ''}`}>
-      <div className="flex items-center justify-between">
-        <h4 className="text-md font-semibold text-gray-900 dark:text-white">{channel} Channel</h4>
+      <div className="flex items-center justify-center md:justify-between">
+        <h4 className="text-md font-semibold text-center md:text-left text-gray-900 dark:text-white">{channel} Channel</h4>
         {isLocked && (
           <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
             <span className="mr-1">🔒</span>
@@ -525,6 +526,157 @@ const ChannelPanel = ({
   );
 };
 
+// Mobile Tab Component
+const MobileChannelTabs = ({
+  leftChannel,
+  rightChannel,
+  onLeftVolumeChange,
+  onRightVolumeChange,
+  onLeftPanChange,
+  onRightPanChange,
+  onLeftReverbToggle,
+  onRightReverbToggle,
+  onLeftReverbChange,
+  onRightReverbChange,
+  onLeftDelayToggle,
+  onRightDelayToggle,
+  onLeftDelayChange,
+  onRightDelayChange,
+  onLeftFrequencyToggle,
+  onRightFrequencyToggle,
+  onLeftFrequencyChange,
+  onRightFrequencyChange,
+  onLeftNoiseToggle,
+  onRightNoiseToggle,
+  onLeftNoiseChange,
+  onRightNoiseChange,
+  isLocked = false,
+  presetLeftChannel,
+  presetRightChannel,
+}: AudioControlsProps) => {
+  const [activeTab, setActiveTab] = useState<"left" | "right">("left");
+  const [isSticky, setIsSticky] = useState(false);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const originalPositionRef = useRef<number>(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (tabsRef.current) {
+        // Store the original position when not sticky
+        if (!isSticky) {
+          const rect = tabsRef.current.getBoundingClientRect();
+          originalPositionRef.current = rect.top + window.scrollY;
+        }
+        
+        // Check if we should stick based on scroll position
+        const scrollY = window.scrollY;
+        const shouldStick = scrollY >= (originalPositionRef.current - 64);
+        
+        setIsSticky(shouldStick);
+      }
+    };
+
+    // Set initial position
+    if (tabsRef.current && !isSticky) {
+      const rect = tabsRef.current.getBoundingClientRect();
+      originalPositionRef.current = rect.top + window.scrollY;
+    }
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isSticky]);
+
+  const handleTabClick = (tab: "left" | "right") => {
+    setActiveTab(tab);
+  };
+
+  return (
+    <div className="md:hidden">
+      {/* Sticky Tab Header */}
+      <div 
+        ref={tabsRef}
+        className={`bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-all duration-200 ${
+          isSticky ? 'fixed top-16 left-0 right-0 z-40 shadow-lg' : 'relative'
+        }`}
+      >
+        <div className="flex">
+          <button
+            onClick={() => handleTabClick("left")}
+            aria-pressed={activeTab === "left"}
+            aria-label="Left Channel Controls"
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
+              activeTab === "left"
+                ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700"
+            }`}
+          >
+            Left Channel
+          </button>
+          <button
+            onClick={() => handleTabClick("right")}
+            aria-pressed={activeTab === "right"}
+            aria-label="Right Channel Controls"
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
+              activeTab === "right"
+                ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700"
+            }`}
+          >
+            Right Channel
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className={`${isSticky ? 'pt-20' : ''}`}>
+        {activeTab === "left" && (
+          <div className="p-4">
+            <ChannelPanel
+              channel="Left"
+              config={leftChannel}
+              presetConfig={presetLeftChannel}
+              otherChannelConfig={rightChannel}
+              onVolumeChange={onLeftVolumeChange}
+              onPanChange={onLeftPanChange}
+              onReverbToggle={onLeftReverbToggle}
+              onReverbChange={onLeftReverbChange}
+              onDelayToggle={onLeftDelayToggle}
+              onDelayChange={onLeftDelayChange}
+              onFrequencyToggle={onLeftFrequencyToggle}
+              onFrequencyChange={onLeftFrequencyChange}
+              onNoiseToggle={onLeftNoiseToggle}
+              onNoiseChange={onLeftNoiseChange}
+              isLocked={isLocked}
+            />
+          </div>
+        )}
+        
+        {activeTab === "right" && (
+          <div className="p-4">
+            <ChannelPanel
+              channel="Right"
+              config={rightChannel}
+              presetConfig={presetRightChannel}
+              otherChannelConfig={leftChannel}
+              onVolumeChange={onRightVolumeChange}
+              onPanChange={onRightPanChange}
+              onReverbToggle={onRightReverbToggle}
+              onReverbChange={onRightReverbChange}
+              onDelayToggle={onRightDelayToggle}
+              onDelayChange={onRightDelayChange}
+              onFrequencyToggle={onRightFrequencyToggle}
+              onFrequencyChange={onRightFrequencyChange}
+              onNoiseToggle={onRightNoiseToggle}
+              onNoiseChange={onRightNoiseChange}
+              isLocked={isLocked}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function AudioControls({
   leftChannel,
   rightChannel,
@@ -553,42 +705,74 @@ export default function AudioControls({
   presetRightChannel,
 }: AudioControlsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-       <ChannelPanel
-         channel="Left"
-         config={leftChannel}
-         presetConfig={presetLeftChannel}
-         otherChannelConfig={rightChannel}
-         onVolumeChange={onLeftVolumeChange}
-         onPanChange={onLeftPanChange}
-         onReverbToggle={onLeftReverbToggle}
-         onReverbChange={onLeftReverbChange}
-         onDelayToggle={onLeftDelayToggle}
-         onDelayChange={onLeftDelayChange}
-         onFrequencyToggle={onLeftFrequencyToggle}
-         onFrequencyChange={onLeftFrequencyChange}
-         onNoiseToggle={onLeftNoiseToggle}
-         onNoiseChange={onLeftNoiseChange}
-         isLocked={isLocked}
-       />
-       
-       <ChannelPanel
-         channel="Right"
-         config={rightChannel}
-         presetConfig={presetRightChannel}
-         otherChannelConfig={leftChannel}
-         onVolumeChange={onRightVolumeChange}
-         onPanChange={onRightPanChange}
-         onReverbToggle={onRightReverbToggle}
-         onReverbChange={onRightReverbChange}
-         onDelayToggle={onRightDelayToggle}
-         onDelayChange={onRightDelayChange}
-         onFrequencyToggle={onRightFrequencyToggle}
-         onFrequencyChange={onRightFrequencyChange}
-         onNoiseToggle={onRightNoiseToggle}
-         onNoiseChange={onRightNoiseChange}
-         isLocked={isLocked}
-       />
-    </div>
+    <>
+      {/* Mobile Tabbed Layout */}
+      <MobileChannelTabs
+        leftChannel={leftChannel}
+        rightChannel={rightChannel}
+        onLeftVolumeChange={onLeftVolumeChange}
+        onRightVolumeChange={onRightVolumeChange}
+        onLeftPanChange={onLeftPanChange}
+        onRightPanChange={onRightPanChange}
+        onLeftReverbToggle={onLeftReverbToggle}
+        onRightReverbToggle={onRightReverbToggle}
+        onLeftReverbChange={onLeftReverbChange}
+        onRightReverbChange={onRightReverbChange}
+        onLeftDelayToggle={onLeftDelayToggle}
+        onRightDelayToggle={onRightDelayToggle}
+        onLeftDelayChange={onLeftDelayChange}
+        onRightDelayChange={onRightDelayChange}
+        onLeftFrequencyToggle={onLeftFrequencyToggle}
+        onRightFrequencyToggle={onRightFrequencyToggle}
+        onLeftFrequencyChange={onLeftFrequencyChange}
+        onRightFrequencyChange={onRightFrequencyChange}
+        onLeftNoiseToggle={onLeftNoiseToggle}
+        onRightNoiseToggle={onRightNoiseToggle}
+        onLeftNoiseChange={onLeftNoiseChange}
+        onRightNoiseChange={onRightNoiseChange}
+        isLocked={isLocked}
+        presetLeftChannel={presetLeftChannel}
+        presetRightChannel={presetRightChannel}
+      />
+
+      {/* Desktop Grid Layout */}
+      <div className="hidden md:grid grid-cols-2 gap-6">
+         <ChannelPanel
+           channel="Left"
+           config={leftChannel}
+           presetConfig={presetLeftChannel}
+           otherChannelConfig={rightChannel}
+           onVolumeChange={onLeftVolumeChange}
+           onPanChange={onLeftPanChange}
+           onReverbToggle={onLeftReverbToggle}
+           onReverbChange={onLeftReverbChange}
+           onDelayToggle={onLeftDelayToggle}
+           onDelayChange={onLeftDelayChange}
+           onFrequencyToggle={onLeftFrequencyToggle}
+           onFrequencyChange={onLeftFrequencyChange}
+           onNoiseToggle={onLeftNoiseToggle}
+           onNoiseChange={onLeftNoiseChange}
+           isLocked={isLocked}
+         />
+         
+         <ChannelPanel
+           channel="Right"
+           config={rightChannel}
+           presetConfig={presetRightChannel}
+           otherChannelConfig={leftChannel}
+           onVolumeChange={onRightVolumeChange}
+           onPanChange={onRightPanChange}
+           onReverbToggle={onRightReverbToggle}
+           onReverbChange={onRightReverbChange}
+           onDelayToggle={onRightDelayToggle}
+           onDelayChange={onRightDelayChange}
+           onFrequencyToggle={onRightFrequencyToggle}
+           onFrequencyChange={onRightFrequencyChange}
+           onNoiseToggle={onRightNoiseToggle}
+           onNoiseChange={onRightNoiseChange}
+           isLocked={isLocked}
+         />
+      </div>
+    </>
   );
 }
