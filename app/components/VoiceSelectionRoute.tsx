@@ -11,6 +11,50 @@ const DEFAULT_TEXTS = [
   "Hello, this is a test of the voice cloning system.",
   "Hello, this is a test of the voice cloning system. Welcome to our demonstration of text-to-speech technology. This is a sample text to showcase the voice synthesis capabilities. Thank you for using our voice cloning application today.",
   "Large sums of money come to me easily and quickly, -- in increasing quantities, -- from multiple sources, -- on a continuous basis, -- in the best interest of all, -- that I get to keep",
+  `I am enough, exactly as I am. ---
+   I am worthy of love, respect, and joy. ---
+   I am allowed to take up space. ---
+   I am valuable, even on my quiet days. ---
+   I am choosing to see my own brilliance. ---
+   I am healing at my own perfect pace. ---
+   I am releasing what no longer serves me. ---
+   I am gentle with the parts of me that hurt. ---
+   I am grateful for the lessons my past taught me. ---
+   I am creating safety within myself. ---
+   I am the author of my story. ---
+   I am free to start fresh today. ---
+   I am open to the support that surrounds me. ---
+   I am resilient and adaptable. ---
+   I am grounded, present, and calm. ---
+   I am speaking to myself with kindness. ---
+   I am honoring my needs and boundaries. ---
+   I am proud of the progress I make—seen and unseen. ---
+   I am patient with my growth. ---
+   I am worthy of the time it takes to heal. ---
+   I am a magnet for peace and clarity. ---
+   I am surrounded by opportunities to thrive. ---
+   I am choosing thoughts that uplift me. ---
+   I am focused on what I can control. ---
+   I am welcoming small wins and celebrating them. ---
+   I am connected to my inner wisdom. ---
+   I am guided, even when I cannot see the path. ---
+   I am trusting the process of becoming. ---
+   I am safe to feel, to learn, and to rise. ---
+   I am returning to love again and again. ---
+   I am grateful for my body and all it does. ---
+   I am breathing in light and exhaling tension. ---
+   I am worthy of rest and renewal. ---
+   I am compassionate toward myself and others. ---
+   I am radiating warmth, confidence, and ease. ---
+   I am attracting people and experiences that honor me. ---
+   I am courageous enough to be seen as I am. ---
+   I am aligned with my purpose. ---
+   I am excited for what’s unfolding. ---
+   I am ready to receive the good that is meant for me. ---
+   I am peace. ---
+   I am love. ---
+   I am whole. ---
+   I am home within myself. ---`
 ];
 
 interface VoiceSelectionRouteProps {

@@ -9,13 +9,16 @@ import { VoiceRecordingsRoute } from "./components/VoiceRecordingsRoute";
 import { Recording } from "./types";
 import { TierEmulationProvider } from "./contexts/TierEmulationContext";
 import { SubscriptionTier } from "./types/subscription";
+import { useRecordingPersistence } from "./hooks/useRecordingPersistence";
 
 const MainContent = () => {
   const { logout } = useAuthContext();
   const [currentRoute, setCurrentRoute] = useState<AppRoute>("upload");
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
-  const [recordings, setRecordings] = useState<Recording[]>([]);
   const [currentRecordingId, setCurrentRecordingId] = useState<string | null>(null);
+  
+  // Use the persistence hook for recordings
+  const { recordings, addRecording, deleteRecording, clearAllRecordings, isLoading: recordingsLoading } = useRecordingPersistence();
 
   // TODO: Replace with actual user subscription tier from authentication/API
   const actualTier: SubscriptionTier = 'PREMIUM';
@@ -45,7 +48,7 @@ const MainContent = () => {
       timestamp: Date.now()
     };
     
-    setRecordings(prev => [recording, ...prev]);
+    addRecording(recording);
     setCurrentRecordingId(recording.id);
     setCurrentRoute("recordings");
   };
@@ -68,6 +71,8 @@ const MainContent = () => {
             recordings={recordings}
             currentRecordingId={currentRecordingId}
             onRecordingSelect={(recordingId) => setCurrentRecordingId(recordingId)}
+            onDeleteRecording={deleteRecording}
+            onClearAllRecordings={clearAllRecordings}
           />
         );
       default:

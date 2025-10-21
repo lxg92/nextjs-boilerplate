@@ -231,7 +231,7 @@ const ChannelPanel = ({
                 type="range"
                 min="0"
                 max="1"
-                step="0.05"
+                step="0.01"
                 value={displayConfig.reverb.wet}
                 onChange={(e) => onReverbChange({ wet: Number(e.target.value) })}
                 disabled={isLocked}
@@ -315,7 +315,7 @@ const ChannelPanel = ({
                 type="range"
                 min="0"
                 max="1"
-                step="0.05"
+                step="0.01"
                 value={displayConfig.delay.wet}
                 onChange={(e) => onDelayChange({ wet: Number(e.target.value) })}
                 disabled={isLocked}
@@ -446,7 +446,7 @@ const ChannelPanel = ({
                 type="range"
                 min="0"
                 max="1"
-                step="0.05"
+                step="0.01"
                 value={displayConfig.frequency.wet}
                 onChange={(e) => onFrequencyChange({ wet: Number(e.target.value) })}
                 disabled={isLocked}
@@ -508,7 +508,7 @@ const ChannelPanel = ({
                 type="range"
                 min="0"
                 max="1"
-                step="0.05"
+                step="0.01"
                 value={displayConfig.noise.wet}
                 onChange={(e) => onNoiseChange({ wet: Number(e.target.value) })}
                 disabled={isLocked}

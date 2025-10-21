@@ -8,6 +8,8 @@ interface VoiceRecordingsRouteProps {
   recordings: Recording[];
   currentRecordingId: string | null;
   onRecordingSelect: (recordingId: string) => void;
+  onDeleteRecording?: (recordingId: string) => void;
+  onClearAllRecordings?: () => void;
 }
 
 const formatTimestamp = (timestamp: number): string => {
@@ -23,10 +25,30 @@ const formatTextPreview = (text: string, maxLength: number = 100): string => {
 export const VoiceRecordingsRoute = ({ 
   recordings, 
   currentRecordingId, 
-  onRecordingSelect 
+  onRecordingSelect,
+  onDeleteRecording,
+  onClearAllRecordings
 }: VoiceRecordingsRouteProps) => {
   const { actualTier } = useTierEmulation();
   const currentRecording = recordings.find(r => r.id === currentRecordingId);
+
+  const handleDeleteRecording = (recordingId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent triggering the recording selection
+    if (onDeleteRecording) {
+      onDeleteRecording(recordingId);
+    }
+  };
+
+  const handleClearAllRecordings = () => {
+    if (onClearAllRecordings && recordings.length > 0) {
+      const confirmed = window.confirm(
+        `Are you sure you want to delete all ${recordings.length} recordings? This action cannot be undone.`
+      );
+      if (confirmed) {
+        onClearAllRecordings();
+      }
+    }
+  };
 
   if (recordings.length === 0) {
     return (
@@ -72,6 +94,19 @@ export const VoiceRecordingsRoute = ({
         <p className="text-gray-600 dark:text-gray-400">
           Browse and manage your voice recordings ({recordings.length} total)
         </p>
+        {recordings.length > 0 && onClearAllRecordings && (
+          <div className="mt-4">
+            <button
+              onClick={handleClearAllRecordings}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Clear All Recordings
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="max-w-6xl mx-auto space-y-6">
@@ -117,12 +152,24 @@ export const VoiceRecordingsRoute = ({
                     </p>
                   </div>
                   
-                  <div className="ml-4 flex-shrink-0">
+                  <div className="ml-4 flex-shrink-0 flex items-center gap-2">
                     <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
                       <svg className="w-6 h-6 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM15.657 6.343a1 1 0 011.414 0A9.972 9.972 0 0119 12a9.972 9.972 0 01-1.929 5.657 1 1 0 11-1.414-1.414A7.971 7.971 0 0017 12a7.971 7.971 0 00-1.343-4.243 1 1 0 010-1.414z" clipRule="evenodd" />
                       </svg>
                     </div>
+                    {onDeleteRecording && (
+                      <button
+                        onClick={(e) => handleDeleteRecording(recording.id, e)}
+                        className="p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                        aria-label={`Delete recording ${recording.voiceName}`}
+                        title="Delete recording"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
