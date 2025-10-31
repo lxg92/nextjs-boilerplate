@@ -10,6 +10,7 @@ import { Recording } from "./types";
 import { TierEmulationProvider } from "./contexts/TierEmulationContext";
 import { SubscriptionTier } from "./types/subscription";
 import { useRecordingPersistence } from "./hooks/useRecordingPersistence";
+import { blobUrlToDataUrl } from "./utils/audioUrlConverter";
 
 const MainContent = () => {
   const { logout } = useAuthContext();
@@ -37,20 +38,41 @@ const MainContent = () => {
     setSelectedVoiceId(voiceId);
   };
 
-  const handleTTSSuccess = (audioUrl: string, voiceId: string, voiceName: string, text: string, speed: number) => {
-    const recording: Recording = {
-      id: `recording_${Date.now()}`,
-      audioUrl,
-      voiceId,
-      voiceName,
-      text,
-      speed,
-      timestamp: Date.now()
-    };
-    
-    addRecording(recording);
-    setCurrentRecordingId(recording.id);
-    setCurrentRoute("recordings");
+  const handleTTSSuccess = async (audioUrl: string, voiceId: string, voiceName: string, text: string, speed: number) => {
+    try {
+      // Convert blob URL to data URL for persistence across sessions
+      const persistentAudioUrl = await blobUrlToDataUrl(audioUrl);
+      
+      const recording: Recording = {
+        id: `recording_${Date.now()}`,
+        audioUrl: persistentAudioUrl,
+        voiceId,
+        voiceName,
+        text,
+        speed,
+        timestamp: Date.now()
+      };
+      
+      addRecording(recording);
+      setCurrentRecordingId(recording.id);
+      setCurrentRoute("recordings");
+    } catch (error) {
+      console.error("Failed to convert audio URL for persistence:", error);
+      // Fallback: save with original URL (will work for current session)
+      const recording: Recording = {
+        id: `recording_${Date.now()}`,
+        audioUrl,
+        voiceId,
+        voiceName,
+        text,
+        speed,
+        timestamp: Date.now()
+      };
+      
+      addRecording(recording);
+      setCurrentRecordingId(recording.id);
+      setCurrentRoute("recordings");
+    }
   };
 
   const renderCurrentRoute = () => {

@@ -94,6 +94,12 @@ const DEFAULT_STATE: AudioProcessingState = {
 export const useAudioProcessing = () => {
   const [state, setState] = useState<AudioProcessingState>(DEFAULT_STATE);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const stateRef = useRef<AudioProcessingState>(state);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   const {
     playerRef,
@@ -198,7 +204,22 @@ export const useAudioProcessing = () => {
     }
     setState(prev => ({ ...prev, isLoading: true, bufferLoaded: false }));
     try {
-      const result = await createToneChain(audioUrl, state);
+      // Validate URL before attempting to load
+      if (audioUrl.startsWith('blob:')) {
+        try {
+          const response = await fetch(audioUrl, { method: 'HEAD' });
+          if (!response.ok) {
+            throw new Error('Blob URL is no longer accessible');
+          }
+        } catch (error) {
+          console.error('Invalid blob URL detected:', error);
+          setState(prev => ({ ...prev, isLoading: false, bufferLoaded: false }));
+          return;
+        }
+      }
+      
+      // Use stateRef.current to access the latest state without adding it as a dependency
+      const result = await createToneChain(audioUrl, stateRef.current);
       if (result.loaded) {
         setState(prev => ({ ...prev, isLoading: false, bufferLoaded: true }));
       } else {
@@ -213,6 +234,7 @@ export const useAudioProcessing = () => {
         checkLoaded();
       }
     } catch (e) {
+      console.error('Error creating audio chain:', e);
       setState(prev => ({ ...prev, isLoading: false, bufferLoaded: false }));
     }
   }, [audioUrl, createToneChain]);

@@ -60,7 +60,7 @@ const DEFAULT_TEXTS = [
 interface VoiceSelectionRouteProps {
   selectedVoiceId?: string;
   onVoiceSelect?: (voiceId: string) => void;
-  onTTSSuccess?: (audioUrl: string, voiceId: string, voiceName: string, text: string, speed: number) => void;
+  onTTSSuccess?: (audioUrl: string, voiceId: string, voiceName: string, text: string, speed: number) => void | Promise<void>;
 }
 
 export const VoiceSelectionRoute = ({ 
