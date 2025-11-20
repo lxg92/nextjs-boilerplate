@@ -31,7 +31,7 @@ export const useVoiceManagement = () => {
       formData.set("name", name);
       formData.set("file", file, file.name);
       
-      const response = await fetch("/api/ivc", { 
+      const response = await fetch("/api/voices", { 
         method: "POST", 
         body: formData 
       });
@@ -50,7 +50,7 @@ export const useVoiceManagement = () => {
   // Delete voice mutation
   const deleteVoiceMutation = useMutation({
     mutationFn: async (voiceId: string) => {
-      const response = await fetch("/api/voices/delete", {
+      const response = await fetch("/api/voices", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ voiceId } as DeleteVoiceRequest),

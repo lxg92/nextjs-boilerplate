@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     },
     body: JSON.stringify({
       text,
-      model_id: "eleven_multilingual_v2", // a current, general-purpose model
+      model_id: "eleven_v3", // a current, general-purpose model
       output_format: "mp3_44100_128", // Explicitly set output format for better SSML support
       voice_settings: { speed }, // speed multiplier
     }),
