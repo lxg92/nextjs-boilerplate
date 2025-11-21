@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import * as Sentry from "@sentry/nextjs";
 import * as Tone from "tone/build/esm/index.js";
 import { AudioPresetConfig } from "../utils/audioPresets";
 import { useToneNodes } from "./useToneNodes";
@@ -199,9 +200,20 @@ export const useAudioProcessing = () => {
   // Create audio processing chain
   const createAudioChain = useCallback(async () => {
     if (!audioUrl) return;
-    if (Tone.context.state !== "running") {
-      await Tone.start();
+    
+    try {
+      if (Tone.context.state !== "running") {
+        await Tone.start();
+      }
+    } catch (error) {
+      Sentry.captureException(error as Error, {
+        tags: { feature: "audio-processing", operation: "tone_init", error_type: "tone_context" },
+        extra: { audio_url_type: audioUrl.startsWith('blob:') ? 'blob' : audioUrl.startsWith('data:') ? 'data' : 'other' },
+      });
+      setState(prev => ({ ...prev, isLoading: false, bufferLoaded: false }));
+      return;
     }
+    
     setState(prev => ({ ...prev, isLoading: true, bufferLoaded: false }));
     try {
       // Validate URL before attempting to load
@@ -213,6 +225,10 @@ export const useAudioProcessing = () => {
           }
         } catch (error) {
           console.error('Invalid blob URL detected:', error);
+          Sentry.captureException(error as Error, {
+            tags: { feature: "audio-processing", operation: "blob_validation", error_type: "blob_validation" },
+            extra: { audio_url_type: "blob" },
+          });
           setState(prev => ({ ...prev, isLoading: false, bufferLoaded: false }));
           return;
         }
@@ -235,6 +251,13 @@ export const useAudioProcessing = () => {
       }
     } catch (e) {
       console.error('Error creating audio chain:', e);
+      Sentry.captureException(e as Error, {
+        tags: { feature: "audio-processing", operation: "audio_chain_creation", error_type: "audio_chain" },
+        extra: { 
+          audio_url_type: audioUrl.startsWith('blob:') ? 'blob' : audioUrl.startsWith('data:') ? 'data' : 'other',
+          audio_url_length: audioUrl.length,
+        },
+      });
       setState(prev => ({ ...prev, isLoading: false, bufferLoaded: false }));
     }
   }, [audioUrl, createToneChain]);
