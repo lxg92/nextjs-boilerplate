@@ -293,6 +293,9 @@ export const useAudioProcessing = () => {
 
   // Set audio source
   const setAudioSource = useCallback((url: string) => {
+    // Only process if URL actually changed
+    if (audioUrl === url) return;
+    
     // Stop any current playback and reset state when switching recordings
     // Use stateRef to check current playing state without adding dependency
     if (stateRef.current.isPlaying) {
@@ -320,7 +323,7 @@ export const useAudioProcessing = () => {
     
     setAudioUrl(url);
     cleanup();
-  }, [cleanup, stopPlayback, cleanupPlayback, getChannelNodeBundles]);
+  }, [audioUrl, cleanup, stopPlayback, cleanupPlayback, getChannelNodeBundles]);
 
 
   // Effect to recreate chain when audio URL changes
