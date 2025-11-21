@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import * as Sentry from "@sentry/nextjs";
 import * as Tone from "tone/build/esm/index.js";
 import { AudioPresetConfig } from "../utils/audioPresets";
 import { useToneNodes } from "./useToneNodes";
@@ -199,9 +200,22 @@ export const useAudioProcessing = () => {
   // Create audio processing chain
   const createAudioChain = useCallback(async () => {
     if (!audioUrl) return;
-    if (Tone.context.state !== "running") {
-      await Tone.start();
+    
+    try {
+      if (Tone.context.state !== "running") {
+        await Tone.start();
+      }
+    } catch (error) {
+      Sentry.captureException(error as Error, {
+        tags: { operation: "tone-context-init", feature: "audio-processing" },
+        extra: { 
+          audio_url_type: audioUrl.startsWith('blob:') ? 'blob' : audioUrl.startsWith('data:') ? 'data' : 'other',
+        },
+      });
+      setState(prev => ({ ...prev, isLoading: false, bufferLoaded: false }));
+      return;
     }
+
     setState(prev => ({ ...prev, isLoading: true, bufferLoaded: false }));
     try {
       // Validate URL before attempting to load
@@ -209,9 +223,25 @@ export const useAudioProcessing = () => {
         try {
           const response = await fetch(audioUrl, { method: 'HEAD' });
           if (!response.ok) {
-            throw new Error('Blob URL is no longer accessible');
+            const error = new Error('Blob URL is no longer accessible');
+            Sentry.captureException(error, {
+              tags: { operation: "validate-blob-url", feature: "audio-processing" },
+              extra: { 
+                audio_url_type: "blob",
+                response_status: response.status,
+              },
+            });
+            console.error('Invalid blob URL detected:', error);
+            setState(prev => ({ ...prev, isLoading: false, bufferLoaded: false }));
+            return;
           }
         } catch (error) {
+          Sentry.captureException(error as Error, {
+            tags: { operation: "validate-blob-url", feature: "audio-processing", error_type: "network" },
+            extra: { 
+              audio_url_type: "blob",
+            },
+          });
           console.error('Invalid blob URL detected:', error);
           setState(prev => ({ ...prev, isLoading: false, bufferLoaded: false }));
           return;
@@ -219,7 +249,20 @@ export const useAudioProcessing = () => {
       }
       
       // Use stateRef.current to access the latest state without adding it as a dependency
-      const result = await createToneChain(audioUrl, stateRef.current);
+      let result;
+      try {
+        result = await createToneChain(audioUrl, stateRef.current);
+      } catch (error) {
+        Sentry.captureException(error as Error, {
+          tags: { operation: "create-audio-chain", feature: "audio-processing" },
+          extra: { 
+            audio_url_type: audioUrl.startsWith('blob:') ? 'blob' : audioUrl.startsWith('data:') ? 'data' : 'other',
+            audio_url_length: audioUrl.length,
+          },
+        });
+        throw error;
+      }
+
       if (result.loaded) {
         setState(prev => ({ ...prev, isLoading: false, bufferLoaded: true }));
       } else {
@@ -234,6 +277,12 @@ export const useAudioProcessing = () => {
         checkLoaded();
       }
     } catch (e) {
+      Sentry.captureException(e as Error, {
+        tags: { operation: "create-audio-chain", feature: "audio-processing" },
+        extra: { 
+          audio_url_type: audioUrl.startsWith('blob:') ? 'blob' : audioUrl.startsWith('data:') ? 'data' : 'other',
+        },
+      });
       console.error('Error creating audio chain:', e);
       setState(prev => ({ ...prev, isLoading: false, bufferLoaded: false }));
     }

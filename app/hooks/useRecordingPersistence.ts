@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { Recording } from "../types";
 import { isBlobUrl, validateBlobUrl, blobUrlToDataUrl } from "../utils/audioUrlConverter";
 
@@ -14,9 +15,36 @@ export const useRecordingPersistence = () => {
   useEffect(() => {
     const loadRecordings = async () => {
       try {
-        const storedRecordings = localStorage.getItem(STORAGE_KEY);
+        let storedRecordings: string | null;
+        try {
+          storedRecordings = localStorage.getItem(STORAGE_KEY);
+        } catch (error) {
+          Sentry.captureException(error as Error, {
+            tags: { operation: "load-recordings", feature: "storage", error_type: "localstorage_read" },
+            extra: { storage_key: STORAGE_KEY },
+          });
+          setIsLoading(false);
+          return;
+        }
+
         if (storedRecordings) {
-          const parsedRecordings = JSON.parse(storedRecordings);
+          let parsedRecordings: any;
+          try {
+            parsedRecordings = JSON.parse(storedRecordings);
+          } catch (error) {
+            Sentry.captureException(error as Error, {
+              tags: { operation: "load-recordings", feature: "storage", error_type: "json_parse" },
+              extra: { 
+                storage_key: STORAGE_KEY,
+                data_length: storedRecordings.length,
+              },
+            });
+            // Clear corrupted data
+            localStorage.removeItem(STORAGE_KEY);
+            setIsLoading(false);
+            return;
+          }
+
           // Validate that the parsed data is an array
           if (Array.isArray(parsedRecordings)) {
             // Process recordings to handle invalid blob URLs
@@ -24,10 +52,30 @@ export const useRecordingPersistence = () => {
               parsedRecordings.map(async (recording: Recording) => {
                 // If it's a blob URL, check if it's still valid
                 if (isBlobUrl(recording.audioUrl)) {
-                  const isValid = await validateBlobUrl(recording.audioUrl);
+                  let isValid: boolean;
+                  try {
+                    isValid = await validateBlobUrl(recording.audioUrl);
+                  } catch (error) {
+                    Sentry.captureException(error as Error, {
+                      tags: { operation: "validate-blob-url", feature: "storage" },
+                      extra: { 
+                        recording_id: recording.id,
+                        blob_url: recording.audioUrl.substring(0, 50) + "...",
+                      },
+                    });
+                    return null;
+                  }
+
                   if (!isValid) {
                     // Try to convert invalid blob URL (will fail, but we'll filter it out)
                     console.warn(`Invalid blob URL detected for recording ${recording.id}, removing from list`);
+                    Sentry.captureMessage("Invalid blob URL detected in recording", {
+                      level: "warning",
+                      tags: { operation: "validate-blob-url", feature: "storage" },
+                      extra: { 
+                        recording_id: recording.id,
+                      },
+                    });
                     return null;
                   }
                   // Convert valid blob URL to data URL for future persistence
@@ -35,6 +83,12 @@ export const useRecordingPersistence = () => {
                     const dataUrl = await blobUrlToDataUrl(recording.audioUrl);
                     return { ...recording, audioUrl: dataUrl };
                   } catch (error) {
+                    Sentry.captureException(error as Error, {
+                      tags: { operation: "blob-to-data-url", feature: "storage" },
+                      extra: { 
+                        recording_id: recording.id,
+                      },
+                    });
                     console.error(`Failed to convert blob URL for recording ${recording.id}:`, error);
                     return null;
                   }
@@ -59,6 +113,13 @@ export const useRecordingPersistence = () => {
               try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(validRecordings));
               } catch (error) {
+                Sentry.captureException(error as Error, {
+                  tags: { operation: "save-recordings", feature: "storage", error_type: "localstorage_write" },
+                  extra: { 
+                    storage_key: STORAGE_KEY,
+                    recording_count: validRecordings.length,
+                  },
+                });
                 console.error("Failed to save converted recordings:", error);
               }
             }
@@ -67,9 +128,20 @@ export const useRecordingPersistence = () => {
           }
         }
       } catch (error) {
+        Sentry.captureException(error as Error, {
+          tags: { operation: "load-recordings", feature: "storage" },
+          extra: { storage_key: STORAGE_KEY },
+        });
         console.error("Failed to load recordings from localStorage:", error);
         // Clear corrupted data
-        localStorage.removeItem(STORAGE_KEY);
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (removeError) {
+          Sentry.captureException(removeError as Error, {
+            tags: { operation: "clear-corrupted-data", feature: "storage" },
+            extra: { storage_key: STORAGE_KEY },
+          });
+        }
       } finally {
         setIsLoading(false);
       }
@@ -84,6 +156,14 @@ export const useRecordingPersistence = () => {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(recordings));
       } catch (error) {
+        Sentry.captureException(error as Error, {
+          tags: { operation: "save-recordings", feature: "storage", error_type: "localstorage_write" },
+          extra: { 
+            storage_key: STORAGE_KEY,
+            recording_count: recordings.length,
+            storage_available: typeof Storage !== "undefined",
+          },
+        });
         console.error("Failed to save recordings to localStorage:", error);
       }
     }

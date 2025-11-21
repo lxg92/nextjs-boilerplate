@@ -4,6 +4,8 @@
  * Data URLs (base64) persist across sessions in localStorage.
  */
 
+import * as Sentry from "@sentry/nextjs";
+
 /**
  * Converts a blob URL to a base64 data URL
  * @param blobUrl - The blob URL to convert
@@ -22,8 +24,34 @@ export const blobUrlToDataUrl = async (blobUrl: string): Promise<string> => {
 
   try {
     // Fetch the blob
-    const response = await fetch(blobUrl);
-    const blob = await response.blob();
+    let response: Response;
+    try {
+      response = await fetch(blobUrl);
+    } catch (error) {
+      Sentry.captureException(error as Error, {
+        tags: { operation: "blob-url-fetch", feature: "audio-url-converter", error_type: "network" },
+        extra: { 
+          url_type: "blob",
+          url_length: blobUrl.length,
+        },
+      });
+      throw error;
+    }
+
+    let blob: Blob;
+    try {
+      blob = await response.blob();
+    } catch (error) {
+      Sentry.captureException(error as Error, {
+        tags: { operation: "blob-url-fetch", feature: "audio-url-converter", error_type: "blob_parse" },
+        extra: { 
+          url_type: "blob",
+          response_status: response.status,
+          response_ok: response.ok,
+        },
+      });
+      throw error;
+    }
     
     // Convert blob to base64 data URL
     return new Promise((resolve, reject) => {
@@ -33,13 +61,41 @@ export const blobUrlToDataUrl = async (blobUrl: string): Promise<string> => {
         if (typeof result === 'string') {
           resolve(result);
         } else {
-          reject(new Error('Failed to convert blob to data URL'));
+          const error = new Error('Failed to convert blob to data URL');
+          Sentry.captureException(error, {
+            tags: { operation: "blob-to-data-url", feature: "audio-url-converter", error_type: "conversion" },
+            extra: { 
+              url_type: "blob",
+              blob_size: blob.size,
+              blob_type: blob.type,
+              result_type: typeof result,
+            },
+          });
+          reject(error);
         }
       };
-      reader.onerror = () => reject(new Error('Failed to read blob'));
+      reader.onerror = () => {
+        const error = new Error('Failed to read blob');
+        Sentry.captureException(error, {
+          tags: { operation: "blob-to-data-url", feature: "audio-url-converter", error_type: "filereader" },
+          extra: { 
+            url_type: "blob",
+            blob_size: blob.size,
+            blob_type: blob.type,
+          },
+        });
+        reject(error);
+      };
       reader.readAsDataURL(blob);
     });
   } catch (error) {
+    // Only log if it's not already logged by Sentry above
+    if (!(error instanceof Error && (error.message.includes("Failed to convert") || error.message.includes("Failed to read")))) {
+      Sentry.captureException(error as Error, {
+        tags: { operation: "blob-url-to-data-url", feature: "audio-url-converter" },
+        extra: { url_type: "blob" },
+      });
+    }
     console.error('Error converting blob URL to data URL:', error);
     throw error;
   }
@@ -75,8 +131,25 @@ export const validateBlobUrl = async (blobUrl: string): Promise<boolean> => {
 
   try {
     const response = await fetch(blobUrl, { method: 'HEAD' });
+    if (!response.ok) {
+      Sentry.captureMessage("Blob URL validation failed - URL not accessible", {
+        level: "warning",
+        tags: { operation: "validate-blob-url", feature: "audio-url-converter" },
+        extra: { 
+          url_type: "blob",
+          response_status: response.status,
+          response_status_text: response.statusText,
+        },
+      });
+    }
     return response.ok;
-  } catch {
+  } catch (error) {
+    Sentry.captureException(error as Error, {
+      tags: { operation: "validate-blob-url", feature: "audio-url-converter", error_type: "network" },
+      extra: { 
+        url_type: "blob",
+      },
+    });
     return false;
   }
 };

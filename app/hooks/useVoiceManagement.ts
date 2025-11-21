@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Sentry from "@sentry/nextjs";
 import { Voice, VoicesResponse, CreateIVCResponse, DeleteVoiceRequest, VoiceUploadData } from "../types";
 
 export const useVoiceManagement = () => {
@@ -10,9 +11,32 @@ export const useVoiceManagement = () => {
   const { data: voicesData, isLoading: voicesLoading } = useQuery<VoicesResponse>({
     queryKey: ["voices"],
     queryFn: async () => {
-      const response = await fetch("/api/voices", { cache: "no-store" });
-      if (!response.ok) throw new Error("Failed to fetch voices");
-      return response.json();
+      try {
+        const response = await fetch("/api/voices", { cache: "no-store" });
+        if (!response.ok) {
+          const errorText = await response.text();
+          const error = new Error(`Failed to fetch voices: ${errorText}`);
+          Sentry.captureException(error, {
+            tags: { operation: "fetch-voices", feature: "voices" },
+            extra: { 
+              endpoint: "/api/voices", 
+              method: "GET",
+              status: response.status,
+              status_text: response.statusText,
+            },
+          });
+          throw error;
+        }
+        return response.json();
+      } catch (error) {
+        if (!(error instanceof Error && error.message.includes("Failed to fetch voices"))) {
+          Sentry.captureException(error as Error, {
+            tags: { operation: "fetch-voices", feature: "voices", error_type: "network" },
+            extra: { endpoint: "/api/voices", method: "GET" },
+          });
+        }
+        throw error;
+      }
     },
     staleTime: 0,
   });
@@ -27,17 +51,43 @@ export const useVoiceManagement = () => {
   // Create voice mutation
   const createVoiceMutation = useMutation({
     mutationFn: async ({ file, name }: VoiceUploadData): Promise<CreateIVCResponse> => {
-      const formData = new FormData();
-      formData.set("name", name);
-      formData.set("file", file, file.name);
-      
-      const response = await fetch("/api/voices", { 
-        method: "POST", 
-        body: formData 
-      });
-      
-      if (!response.ok) throw new Error(await response.text());
-      return response.json();
+      try {
+        const formData = new FormData();
+        formData.set("name", name);
+        formData.set("file", file, file.name);
+        
+        const response = await fetch("/api/voices", { 
+          method: "POST", 
+          body: formData 
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          const error = new Error(`Failed to create voice: ${errorText}`);
+          Sentry.captureException(error, {
+            tags: { operation: "create-voice", feature: "voices" },
+            extra: { 
+              endpoint: "/api/voices", 
+              method: "POST",
+              status: response.status,
+              status_text: response.statusText,
+              file_name: file.name,
+              file_size: file.size,
+              voice_name: name,
+            },
+          });
+          throw error;
+        }
+        return response.json();
+      } catch (error) {
+        if (!(error instanceof Error && error.message.includes("Failed to create voice"))) {
+          Sentry.captureException(error as Error, {
+            tags: { operation: "create-voice", feature: "voices", error_type: "network" },
+            extra: { endpoint: "/api/voices", method: "POST", file_name: file.name },
+          });
+        }
+        throw error;
+      }
     },
     onSuccess: async (payload) => {
       const newId = payload.voice_id;
@@ -50,14 +100,38 @@ export const useVoiceManagement = () => {
   // Delete voice mutation
   const deleteVoiceMutation = useMutation({
     mutationFn: async (voiceId: string) => {
-      const response = await fetch("/api/voices", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voiceId } as DeleteVoiceRequest),
-      });
-      
-      if (!response.ok) throw new Error(await response.text());
-      return response.json();
+      try {
+        const response = await fetch("/api/voices", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ voiceId } as DeleteVoiceRequest),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          const error = new Error(`Failed to delete voice: ${errorText}`);
+          Sentry.captureException(error, {
+            tags: { operation: "delete-voice", feature: "voices" },
+            extra: { 
+              endpoint: "/api/voices", 
+              method: "DELETE",
+              voice_id: voiceId,
+              status: response.status,
+              status_text: response.statusText,
+            },
+          });
+          throw error;
+        }
+        return response.json();
+      } catch (error) {
+        if (!(error instanceof Error && error.message.includes("Failed to delete voice"))) {
+          Sentry.captureException(error as Error, {
+            tags: { operation: "delete-voice", feature: "voices", error_type: "network" },
+            extra: { endpoint: "/api/voices", method: "DELETE", voice_id: voiceId },
+          });
+        }
+        throw error;
+      }
     },
     onSuccess: async () => {
       // Refresh voices list after deletion
