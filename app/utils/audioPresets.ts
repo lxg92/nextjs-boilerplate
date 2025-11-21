@@ -1,4 +1,4 @@
-import { ChannelConfig } from "../hooks/useAudioProcessing";
+import { ChannelConfig } from "../types";
 
 // Configuration type for presets (excludes runtime state)
 export type AudioPresetConfig = {

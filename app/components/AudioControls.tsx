@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ChannelConfig } from "../hooks/useAudioProcessing";
+import { ChannelConfig } from "../types";
 
 interface AudioControlsProps {
   leftChannel: ChannelConfig;

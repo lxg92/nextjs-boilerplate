@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from "react";
 import * as Tone from "tone/build/esm/index.js";
-import { AudioProcessingState, ChannelConfig } from "./useAudioProcessing";
+import { AudioProcessingState, ChannelConfig } from "../types";
 
 export const useToneNodes = () => {
   const playerRef = useRef<Tone.Player | null>(null);
