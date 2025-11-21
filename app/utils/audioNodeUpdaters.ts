@@ -1,5 +1,5 @@
 import * as Tone from "tone/build/esm/index.js";
-import type { ChannelConfig } from "../hooks/useAudioProcessing";
+import type { ChannelConfig } from "../types";
 
 export type ChannelSide = "left" | "right";
 

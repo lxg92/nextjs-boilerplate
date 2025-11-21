@@ -47,3 +47,44 @@ export interface Recording {
   timestamp: number;
   audioConfig?: any; // Optional audio configuration for future preset saving
 }
+
+export interface ChannelConfig {
+  volume: number; // 0-200%
+  pan: number; // -1 to 1
+  reverb: {
+    enabled: boolean;
+    roomSize: number; // 0.1-10
+    wet: number; // 0-1
+  };
+  delay: {
+    enabled: boolean;
+    delayTime: string; // Tone.Time notation
+    feedback: number; // 0-0.9
+    wet: number; // 0-1
+  };
+  frequency: {
+    enabled: boolean;
+    frequency: number; // Hz
+    wet: number; // 0-1
+  };
+  noise: {
+    enabled: boolean;
+    type: "brown" | "pink" | "white";
+    wet: number; // 0-1
+  };
+}
+
+export interface AudioProcessingState {
+  leftChannel: ChannelConfig;
+  rightChannel: ChannelConfig;
+  masterVolume: number;
+  isPlaying: boolean;
+  isLoading: boolean;
+  bufferLoaded: boolean;
+  loop: boolean;
+  playbackProgress: {
+    currentTime: number;
+    duration: number;
+    progress: number;
+  };
+}

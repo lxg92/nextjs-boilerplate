@@ -14,39 +14,40 @@ export const useRecordingPersistence = () => {
   // Load recordings from localStorage on mount
   useEffect(() => {
     const loadRecordings = async () => {
-      let storedRecordings;
       try {
-        storedRecordings = localStorage.getItem(STORAGE_KEY);
-      } catch (error) {
-        Sentry.captureException(error as Error, {
-          tags: { feature: "storage", operation: "read", error_type: "localstorage_read" },
-          extra: { storage_key: STORAGE_KEY },
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      if (storedRecordings) {
-        let parsedRecordings;
+        let storedRecordings;
         try {
-          parsedRecordings = JSON.parse(storedRecordings);
+          storedRecordings = localStorage.getItem(STORAGE_KEY);
         } catch (error) {
           Sentry.captureException(error as Error, {
-            tags: { feature: "storage", operation: "parse", error_type: "json_parse" },
-            extra: { storage_key: STORAGE_KEY, data_length: storedRecordings.length },
+            tags: { feature: "storage", operation: "read", error_type: "localstorage_read" },
+            extra: { storage_key: STORAGE_KEY },
           });
-          // Clear corrupted data
-          try {
-            localStorage.removeItem(STORAGE_KEY);
-          } catch (removeError) {
-            Sentry.captureException(removeError as Error, {
-              tags: { feature: "storage", operation: "cleanup", error_type: "localstorage_write" },
-              extra: { storage_key: STORAGE_KEY },
-            });
-          }
           setIsLoading(false);
           return;
         }
+
+        if (storedRecordings) {
+          let parsedRecordings;
+          try {
+            parsedRecordings = JSON.parse(storedRecordings);
+          } catch (error) {
+            Sentry.captureException(error as Error, {
+              tags: { feature: "storage", operation: "parse", error_type: "json_parse" },
+              extra: { storage_key: STORAGE_KEY, data_length: storedRecordings.length },
+            });
+            // Clear corrupted data
+            try {
+              localStorage.removeItem(STORAGE_KEY);
+            } catch (removeError) {
+              Sentry.captureException(removeError as Error, {
+                tags: { feature: "storage", operation: "cleanup", error_type: "localstorage_write" },
+                extra: { storage_key: STORAGE_KEY },
+              });
+            }
+            setIsLoading(false);
+            return;
+          }
           // Validate that the parsed data is an array
           if (Array.isArray(parsedRecordings)) {
             // Process recordings to handle invalid blob URLs
