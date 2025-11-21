@@ -293,10 +293,32 @@ export const useAudioProcessing = () => {
 
   // Set audio source
   const setAudioSource = useCallback((url: string) => {
-    setAudioUrl(url);
-    setState(prev => ({ ...prev, isLoading: true }));
+    // Stop any current playback
+    stopPlayback();
+    
+    // Stop all effects
+    const nodeBundles = getChannelNodeBundles();
+    stopAllEffects(nodeBundles.left, nodeBundles.right);
+    
+    // Reset state to "ready" state
+    setState(prev => ({
+      ...prev,
+      isPlaying: false,
+      isLoading: true,
+      bufferLoaded: false,
+      playbackProgress: {
+        currentTime: 0,
+        duration: 0,
+        progress: 0,
+      },
+    }));
+    
+    // Clean up audio chain
     cleanup();
-  }, [cleanup]);
+    
+    // Set new audio URL (this will trigger createAudioChain via useEffect)
+    setAudioUrl(url);
+  }, [cleanup, stopPlayback, getChannelNodeBundles]);
 
 
   // Effect to recreate chain when audio URL changes
