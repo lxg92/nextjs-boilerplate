@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAudioProcessing } from "../hooks/useAudioProcessing";
 import AudioControls from "./AudioControls";
 import { PlaybackProgress } from "./PlaybackProgress";
@@ -348,9 +348,14 @@ export const AudioPlayer = ({ audioUrl, className = "", actualTier }: AudioPlaye
   const channelHandlers = useChannelHandlers(updateChannelConfig, state);
 
   // Set audio source when audioUrl changes
+  const prevAudioUrlRef = useRef<string | null>(null);
   useEffect(() => {
     if (!audioUrl) return;
-    setAudioSource(audioUrl);
+    // Only call setAudioSource if the URL actually changed
+    if (prevAudioUrlRef.current !== audioUrl) {
+      prevAudioUrlRef.current = audioUrl;
+      setAudioSource(audioUrl);
+    }
   }, [audioUrl, setAudioSource]);
 
   const handlePresetSelect = (presetName: string) => {

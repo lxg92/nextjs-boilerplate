@@ -293,10 +293,37 @@ export const useAudioProcessing = () => {
 
   // Set audio source
   const setAudioSource = useCallback((url: string) => {
+    // Only process if URL actually changed
+    if (audioUrl === url) return;
+    
+    // Stop any current playback and reset state when switching recordings
+    // Use stateRef to check current playing state without adding dependency
+    if (stateRef.current.isPlaying) {
+      stopPlayback();
+      // Also clear playback timers explicitly
+      cleanupPlayback();
+    }
+    
+    // Stop all effects (stopPlayback already does this via onPlaybackEnd, but ensure it's done)
+    const nodeBundles = getChannelNodeBundles();
+    stopAllEffects(nodeBundles.left, nodeBundles.right);
+    
+    // Reset state to initial ready state
+    setState(prev => ({
+      ...prev,
+      isPlaying: false,
+      isLoading: true,
+      bufferLoaded: false,
+      playbackProgress: {
+        currentTime: 0,
+        duration: 0,
+        progress: 0,
+      },
+    }));
+    
     setAudioUrl(url);
-    setState(prev => ({ ...prev, isLoading: true }));
     cleanup();
-  }, [cleanup]);
+  }, [audioUrl, cleanup, stopPlayback, cleanupPlayback, getChannelNodeBundles]);
 
 
   // Effect to recreate chain when audio URL changes
