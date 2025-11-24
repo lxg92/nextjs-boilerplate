@@ -22,6 +22,10 @@ interface AudioControlsProps {
   onRightFrequencyToggle: (enabled: boolean) => void;
   onLeftFrequencyChange: (params: { frequency?: number; wet?: number }) => void;
   onRightFrequencyChange: (params: { frequency?: number; wet?: number }) => void;
+  onLeftIsochronicToggle: (enabled: boolean) => void;
+  onRightIsochronicToggle: (enabled: boolean) => void;
+  onLeftIsochronicChange: (params: { carrierFrequency?: number; pulseRate?: number; wet?: number }) => void;
+  onRightIsochronicChange: (params: { carrierFrequency?: number; pulseRate?: number; wet?: number }) => void;
   onLeftNoiseToggle: (enabled: boolean) => void;
   onRightNoiseToggle: (enabled: boolean) => void;
   onLeftNoiseChange: (params: { type?: "brown" | "pink" | "white"; wet?: number }) => void;
@@ -44,6 +48,8 @@ const ChannelPanel = ({
   onDelayChange,
   onFrequencyToggle,
   onFrequencyChange,
+  onIsochronicToggle,
+  onIsochronicChange,
   onNoiseToggle,
   onNoiseChange,
   isLocked = false,
@@ -60,6 +66,8 @@ const ChannelPanel = ({
   onDelayChange: (params: { delayTime?: string; feedback?: number; wet?: number }) => void;
   onFrequencyToggle: (enabled: boolean) => void;
   onFrequencyChange: (params: { frequency?: number; wet?: number }) => void;
+  onIsochronicToggle: (enabled: boolean) => void;
+  onIsochronicChange: (params: { carrierFrequency?: number; pulseRate?: number; wet?: number }) => void;
   onNoiseToggle: (enabled: boolean) => void;
   onNoiseChange: (params: { type?: "brown" | "pink" | "white"; wet?: number }) => void;
   isLocked?: boolean;
@@ -461,6 +469,90 @@ const ChannelPanel = ({
         )}
       </div>
 
+      {/* Isochronic Beats */}
+      <div className={`border rounded-lg p-3 ${
+        isLocked 
+          ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800' 
+          : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'
+      }`}>
+        <div className="flex items-center justify-between mb-3">
+          <label className={`text-sm font-medium ${isLocked ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+            Isochronic Beats
+          </label>
+          <input
+            type="checkbox"
+            checked={displayConfig.isochronic.enabled}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onIsochronicToggle(e.target.checked)}
+            disabled={isLocked}
+            className={`rounded ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+          />
+        </div>
+
+        {displayConfig.isochronic.enabled && (
+          <div className="space-y-3">
+            <div>
+              <label className={`block text-xs mb-1 ${isLocked ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                Carrier Frequency: {displayConfig.isochronic.carrierFrequency}Hz
+              </label>
+              <input
+                type="range"
+                min="20"
+                max="500"
+                step="1"
+                value={displayConfig.isochronic.carrierFrequency}
+                onChange={(e) => onIsochronicChange({ carrierFrequency: Number(e.target.value) })}
+                disabled={isLocked}
+                className={`w-full h-1 rounded-lg appearance-none ${
+                  isLocked 
+                    ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed opacity-60' 
+                    : 'bg-gray-200 cursor-pointer'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className={`block text-xs mb-1 ${isLocked ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                Pulse Rate: {displayConfig.isochronic.pulseRate.toFixed(1)}Hz
+              </label>
+              <input
+                type="range"
+                min="0.5"
+                max="40"
+                step="0.1"
+                value={displayConfig.isochronic.pulseRate}
+                onChange={(e) => onIsochronicChange({ pulseRate: Number(e.target.value) })}
+                disabled={isLocked}
+                className={`w-full h-1 rounded-lg appearance-none ${
+                  isLocked 
+                    ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed opacity-60' 
+                    : 'bg-gray-200 cursor-pointer'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className={`block text-xs mb-1 ${isLocked ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                Wet Mix: {Math.round(displayConfig.isochronic.wet * 100)}%
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={displayConfig.isochronic.wet}
+                onChange={(e) => onIsochronicChange({ wet: Number(e.target.value) })}
+                disabled={isLocked}
+                className={`w-full h-1 rounded-lg appearance-none ${
+                  isLocked 
+                    ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed opacity-60' 
+                    : 'bg-gray-200 cursor-pointer'
+                }`}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Noise Control */}
       <div className={`border rounded-lg p-3 ${
         isLocked 
@@ -546,6 +638,10 @@ const MobileChannelTabs = ({
   onRightFrequencyToggle,
   onLeftFrequencyChange,
   onRightFrequencyChange,
+  onLeftIsochronicToggle,
+  onRightIsochronicToggle,
+  onLeftIsochronicChange,
+  onRightIsochronicChange,
   onLeftNoiseToggle,
   onRightNoiseToggle,
   onLeftNoiseChange,
@@ -644,6 +740,8 @@ const MobileChannelTabs = ({
               onDelayChange={onLeftDelayChange}
               onFrequencyToggle={onLeftFrequencyToggle}
               onFrequencyChange={onLeftFrequencyChange}
+              onIsochronicToggle={onLeftIsochronicToggle}
+              onIsochronicChange={onLeftIsochronicChange}
               onNoiseToggle={onLeftNoiseToggle}
               onNoiseChange={onLeftNoiseChange}
               isLocked={isLocked}
@@ -666,6 +764,8 @@ const MobileChannelTabs = ({
               onDelayChange={onRightDelayChange}
               onFrequencyToggle={onRightFrequencyToggle}
               onFrequencyChange={onRightFrequencyChange}
+              onIsochronicToggle={onRightIsochronicToggle}
+              onIsochronicChange={onRightIsochronicChange}
               onNoiseToggle={onRightNoiseToggle}
               onNoiseChange={onRightNoiseChange}
               isLocked={isLocked}
@@ -696,6 +796,10 @@ export default function AudioControls({
   onRightFrequencyToggle,
   onLeftFrequencyChange,
   onRightFrequencyChange,
+  onLeftIsochronicToggle,
+  onRightIsochronicToggle,
+  onLeftIsochronicChange,
+  onRightIsochronicChange,
   onLeftNoiseToggle,
   onRightNoiseToggle,
   onLeftNoiseChange,
@@ -750,6 +854,8 @@ export default function AudioControls({
            onDelayChange={onLeftDelayChange}
            onFrequencyToggle={onLeftFrequencyToggle}
            onFrequencyChange={onLeftFrequencyChange}
+          onIsochronicToggle={onLeftIsochronicToggle}
+          onIsochronicChange={onLeftIsochronicChange}
            onNoiseToggle={onLeftNoiseToggle}
            onNoiseChange={onLeftNoiseChange}
            isLocked={isLocked}
@@ -768,6 +874,8 @@ export default function AudioControls({
            onDelayChange={onRightDelayChange}
            onFrequencyToggle={onRightFrequencyToggle}
            onFrequencyChange={onRightFrequencyChange}
+          onIsochronicToggle={onRightIsochronicToggle}
+          onIsochronicChange={onRightIsochronicChange}
            onNoiseToggle={onRightNoiseToggle}
            onNoiseChange={onRightNoiseChange}
            isLocked={isLocked}

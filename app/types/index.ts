@@ -67,6 +67,12 @@ export interface ChannelConfig {
     frequency: number; // Hz
     wet: number; // 0-1
   };
+  isochronic: {
+    enabled: boolean;
+    carrierFrequency: number; // Hz
+    pulseRate: number; // Hz
+    wet: number; // 0-1
+  };
   noise: {
     enabled: boolean;
     type: "brown" | "pink" | "white";

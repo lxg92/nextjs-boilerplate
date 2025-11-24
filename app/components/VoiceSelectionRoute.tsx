@@ -10,7 +10,7 @@ import { SubscriptionTier } from "../types/subscription";
 const DEFAULT_TEXTS = [
   "Hello, this is a test of the voice cloning system.",
   "Hello, this is a test of the voice cloning system. Welcome to our demonstration of text-to-speech technology. This is a sample text to showcase the voice synthesis capabilities. Thank you for using our voice cloning application today.",
-  "Large sums of money come to me easily and quickly, -- in increasing quantities, -- from multiple sources, -- on a continuous basis, -- in the best interest of all, -- that I get to keep",
+  "Large sums of money come to me easily and quickly, -- in increasing quantities, -- from multiple sources, -- on a continuous basis, -- in the best interest of all, -- that I get to keep ---",
   `I am enough, exactly as I am. ---
    I am worthy of love, respect, and joy. ---
    I am allowed to take up space. ---

@@ -15,6 +15,10 @@ export type NodeBundle = {
   oscillatorGain: Tone.Gain | null;
   noise: Tone.Noise | null;
   noiseGain: Tone.Gain | null;
+  isochronicOscillator: Tone.Oscillator | null;
+  isochronicPulseGain: Tone.Gain | null;
+  isochronicWetGain: Tone.Gain | null;
+  isochronicLfo: Tone.LFO | null;
 };
 
 export type MasterNodes = {
@@ -26,6 +30,7 @@ export const EFFECT_CATEGORIES = {
   reverb: "dependent" as EffectCategory,
   delay: "dependent" as EffectCategory,
   frequency: "independent" as EffectCategory,
+  isochronic: "independent" as EffectCategory,
   noise: "independent" as EffectCategory,
 } as const;
 
@@ -34,7 +39,20 @@ export const updateChannelParameters = (
   nodes: NodeBundle,
   isPlaying: boolean = false
 ) => {
-  if (!nodes.gain || !nodes.pan || !nodes.reverb || !nodes.delay || !nodes.oscillator || !nodes.oscillatorGain || !nodes.noise || !nodes.noiseGain) {
+  if (
+    !nodes.gain ||
+    !nodes.pan ||
+    !nodes.reverb ||
+    !nodes.delay ||
+    !nodes.oscillator ||
+    !nodes.oscillatorGain ||
+    !nodes.noise ||
+    !nodes.noiseGain ||
+    !nodes.isochronicOscillator ||
+    !nodes.isochronicPulseGain ||
+    !nodes.isochronicWetGain ||
+    !nodes.isochronicLfo
+  ) {
     return;
   }
 
@@ -113,6 +131,48 @@ export const updateChannelParameters = (
     }
     nodes.noiseGain.gain.value = 0;
   }
+
+  // Independent effects (Isochronic beats) - carrier oscillator modulated by LFO
+  const isoShouldBeActive = config.isochronic.enabled && isPlaying;
+  nodes.isochronicOscillator.frequency.value = config.isochronic.carrierFrequency;
+  nodes.isochronicLfo.frequency.value = config.isochronic.pulseRate;
+  nodes.isochronicLfo.min = 0;
+  nodes.isochronicLfo.max = 1;
+
+  if (isoShouldBeActive) {
+    if (nodes.isochronicOscillator.state !== "started") {
+      try {
+        nodes.isochronicOscillator.start();
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (nodes.isochronicLfo.state !== "started") {
+      try {
+        nodes.isochronicLfo.start();
+      } catch (e) {
+        // ignore
+      }
+    }
+    nodes.isochronicWetGain.gain.value = config.isochronic.wet;
+  } else {
+    if (nodes.isochronicOscillator.state === "started") {
+      try {
+        nodes.isochronicOscillator.stop();
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (nodes.isochronicLfo.state === "started") {
+      try {
+        nodes.isochronicLfo.stop();
+      } catch (e) {
+        // ignore
+      }
+    }
+    nodes.isochronicPulseGain.gain.value = 0;
+    nodes.isochronicWetGain.gain.value = 0;
+  }
 };
 
 export const updateMasterVolume = (masterVolume: number, masterGain: Tone.Gain | null) => {
@@ -164,6 +224,29 @@ export const stopAllEffects = (leftNodes: NodeBundle, rightNodes: NodeBundle) =>
   }
   if (leftNodes.noiseGain) leftNodes.noiseGain.gain.value = 0;
   if (rightNodes.noiseGain) rightNodes.noiseGain.gain.value = 0;
+
+  // Stop independent effects (isochronic) when playback ends
+  const stopIso = (osc: Tone.Oscillator | null, lfo: Tone.LFO | null, pulseGain: Tone.Gain | null, wetGain: Tone.Gain | null) => {
+    if (osc && osc.state === "started") {
+      try {
+        osc.stop();
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (lfo && lfo.state === "started") {
+      try {
+        lfo.stop();
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (pulseGain) pulseGain.gain.value = 0;
+    if (wetGain) wetGain.gain.value = 0;
+  };
+
+  stopIso(leftNodes.isochronicOscillator, leftNodes.isochronicLfo, leftNodes.isochronicPulseGain, leftNodes.isochronicWetGain);
+  stopIso(rightNodes.isochronicOscillator, rightNodes.isochronicLfo, rightNodes.isochronicPulseGain, rightNodes.isochronicWetGain);
 };
 
 // Helper function to get independent effects that should be active during playback
@@ -174,6 +257,10 @@ export const getActiveIndependentEffects = (config: ChannelConfig) => {
     activeEffects.push('frequency');
   }
   
+  if (config.isochronic.enabled) {
+    activeEffects.push('isochronic');
+  }
+
   if (config.noise.enabled) {
     activeEffects.push('noise');
   }

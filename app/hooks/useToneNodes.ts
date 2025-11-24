@@ -22,6 +22,14 @@ export const useToneNodes = () => {
   const rightNoiseRef = useRef<Tone.Noise | null>(null);
   const leftNoiseGainRef = useRef<Tone.Gain | null>(null);
   const rightNoiseGainRef = useRef<Tone.Gain | null>(null);
+  const leftIsoOscillatorRef = useRef<Tone.Oscillator | null>(null);
+  const rightIsoOscillatorRef = useRef<Tone.Oscillator | null>(null);
+  const leftIsoPulseGainRef = useRef<Tone.Gain | null>(null);
+  const rightIsoPulseGainRef = useRef<Tone.Gain | null>(null);
+  const leftIsoWetGainRef = useRef<Tone.Gain | null>(null);
+  const rightIsoWetGainRef = useRef<Tone.Gain | null>(null);
+  const leftIsoLfoRef = useRef<Tone.LFO | null>(null);
+  const rightIsoLfoRef = useRef<Tone.LFO | null>(null);
   const masterGainRef = useRef<Tone.Gain | null>(null);
 
   const cleanup = useCallback(() => {
@@ -43,6 +51,14 @@ export const useToneNodes = () => {
       rightNoiseRef.current,
       leftNoiseGainRef.current,
       rightNoiseGainRef.current,
+      leftIsoOscillatorRef.current,
+      rightIsoOscillatorRef.current,
+      leftIsoPulseGainRef.current,
+      rightIsoPulseGainRef.current,
+      leftIsoWetGainRef.current,
+      rightIsoWetGainRef.current,
+      leftIsoLfoRef.current,
+      rightIsoLfoRef.current,
       masterGainRef.current,
     ].forEach((node) => node?.dispose());
 
@@ -63,6 +79,14 @@ export const useToneNodes = () => {
     rightNoiseRef.current = null;
     leftNoiseGainRef.current = null;
     rightNoiseGainRef.current = null;
+    leftIsoOscillatorRef.current = null;
+    rightIsoOscillatorRef.current = null;
+    leftIsoPulseGainRef.current = null;
+    rightIsoPulseGainRef.current = null;
+    leftIsoWetGainRef.current = null;
+    rightIsoWetGainRef.current = null;
+    leftIsoLfoRef.current = null;
+    rightIsoLfoRef.current = null;
     masterGainRef.current = null;
   }, []);
 
@@ -74,7 +98,11 @@ export const useToneNodes = () => {
     oscillator: Tone.Oscillator,
     oscGain: Tone.Gain,
     noise: Tone.Noise,
-    noiseGain: Tone.Gain
+    noiseGain: Tone.Gain,
+    isoOscillator: Tone.Oscillator,
+    isoPulseGain: Tone.Gain,
+    isoWetGain: Tone.Gain,
+    isoLfo: Tone.LFO
   ) => {
     // Configure reverb
     reverb.decay = channelConfig.reverb.roomSize;
@@ -92,6 +120,14 @@ export const useToneNodes = () => {
     // Configure noise
     noise.type = channelConfig.noise.type;
     noiseGain.gain.value = channelConfig.noise.enabled ? channelConfig.noise.wet : 0;
+
+    // Configure isochronic beats
+    isoOscillator.frequency.value = channelConfig.isochronic.carrierFrequency;
+    isoPulseGain.gain.value = 0;
+    isoWetGain.gain.value = channelConfig.isochronic.enabled ? channelConfig.isochronic.wet : 0;
+    isoLfo.frequency.value = channelConfig.isochronic.pulseRate;
+    isoLfo.min = 0;
+    isoLfo.max = 1;
   }, []);
 
   const createAudioChain = useCallback(async (audioUrl: string, state: AudioProcessingState) => {
@@ -120,11 +156,54 @@ export const useToneNodes = () => {
     const rightNoise = new Tone.Noise(state.rightChannel.noise.type);
     const leftNoiseGain = new Tone.Gain();
     const rightNoiseGain = new Tone.Gain();
+    const leftIsoOscillator = new Tone.Oscillator(state.leftChannel.isochronic.carrierFrequency, "sine");
+    const rightIsoOscillator = new Tone.Oscillator(state.rightChannel.isochronic.carrierFrequency, "sine");
+    const leftIsoPulseGain = new Tone.Gain(0);
+    const rightIsoPulseGain = new Tone.Gain(0);
+    const leftIsoWetGain = new Tone.Gain(state.leftChannel.isochronic.enabled ? state.leftChannel.isochronic.wet : 0);
+    const rightIsoWetGain = new Tone.Gain(state.rightChannel.isochronic.enabled ? state.rightChannel.isochronic.wet : 0);
+    const leftIsoLfo = new Tone.LFO({
+      frequency: state.leftChannel.isochronic.pulseRate,
+      min: 0,
+      max: 1,
+    });
+    const rightIsoLfo = new Tone.LFO({
+      frequency: state.rightChannel.isochronic.pulseRate,
+      min: 0,
+      max: 1,
+    });
     const masterGain = new Tone.Gain();
 
     // Configure effects using helper function
-    configureChannelEffects(state.leftChannel, leftReverb, leftDelay, leftOscillator, leftOscGain, leftNoise, leftNoiseGain);
-    configureChannelEffects(state.rightChannel, rightReverb, rightDelay, rightOscillator, rightOscGain, rightNoise, rightNoiseGain);
+    configureChannelEffects(
+      state.leftChannel,
+      leftReverb,
+      leftDelay,
+      leftOscillator,
+      leftOscGain,
+      leftNoise,
+      leftNoiseGain,
+      leftIsoOscillator,
+      leftIsoPulseGain,
+      leftIsoWetGain,
+      leftIsoLfo
+    );
+    configureChannelEffects(
+      state.rightChannel,
+      rightReverb,
+      rightDelay,
+      rightOscillator,
+      rightOscGain,
+      rightNoise,
+      rightNoiseGain,
+      rightIsoOscillator,
+      rightIsoPulseGain,
+      rightIsoWetGain,
+      rightIsoLfo
+    );
+
+    leftIsoLfo.connect(leftIsoPulseGain.gain);
+    rightIsoLfo.connect(rightIsoPulseGain.gain);
 
     // Pan/volume
     leftPan.pan.value = state.leftChannel.pan;
@@ -141,6 +220,8 @@ export const useToneNodes = () => {
     rightOscillator.chain(rightOscGain, rightPan, masterGain);
     leftNoise.chain(leftNoiseGain, leftPan, masterGain);
     rightNoise.chain(rightNoiseGain, rightPan, masterGain);
+    leftIsoOscillator.chain(leftIsoPulseGain, leftIsoWetGain, leftPan, masterGain);
+    rightIsoOscillator.chain(rightIsoPulseGain, rightIsoWetGain, rightPan, masterGain);
     masterGain.toDestination();
 
     // Refs
@@ -161,6 +242,14 @@ export const useToneNodes = () => {
     rightNoiseRef.current = rightNoise;
     leftNoiseGainRef.current = leftNoiseGain;
     rightNoiseGainRef.current = rightNoiseGain;
+    leftIsoOscillatorRef.current = leftIsoOscillator;
+    rightIsoOscillatorRef.current = rightIsoOscillator;
+    leftIsoPulseGainRef.current = leftIsoPulseGain;
+    rightIsoPulseGainRef.current = rightIsoPulseGain;
+    leftIsoWetGainRef.current = leftIsoWetGain;
+    rightIsoWetGainRef.current = rightIsoWetGain;
+    leftIsoLfoRef.current = leftIsoLfo;
+    rightIsoLfoRef.current = rightIsoLfo;
     masterGainRef.current = masterGain;
 
     // Oscillators are created but not started - they will be controlled by playback state
@@ -188,6 +277,14 @@ export const useToneNodes = () => {
     rightNoiseRef,
     leftNoiseGainRef,
     rightNoiseGainRef,
+    leftIsoOscillatorRef,
+    rightIsoOscillatorRef,
+    leftIsoPulseGainRef,
+    rightIsoPulseGainRef,
+    leftIsoWetGainRef,
+    rightIsoWetGainRef,
+    leftIsoLfoRef,
+    rightIsoLfoRef,
     masterGainRef,
     // actions
     createAudioChain,

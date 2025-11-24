@@ -28,6 +28,8 @@ interface ChannelHandlers {
   onDelayChange: (channel: Channel, params: { delayTime?: string; feedback?: number; wet?: number }) => void;
   onFrequencyToggle: (channel: Channel, enabled: boolean) => void;
   onFrequencyChange: (channel: Channel, params: { frequency?: number; wet?: number }) => void;
+  onIsochronicToggle: (channel: Channel, enabled: boolean) => void;
+  onIsochronicChange: (channel: Channel, params: { carrierFrequency?: number; pulseRate?: number; wet?: number }) => void;
   onNoiseToggle: (channel: Channel, enabled: boolean) => void;
   onNoiseChange: (channel: Channel, params: { type?: "brown" | "pink" | "white"; wet?: number }) => void;
 }
@@ -110,6 +112,24 @@ const useChannelHandlers = (
     });
   };
 
+  const handleIsochronicToggle = (channel: Channel, enabled: boolean) => {
+    updateChannelConfig(channel, {
+      isochronic: { ...state[`${channel}Channel`].isochronic, enabled }
+    });
+  };
+
+  const handleIsochronicChange = (
+    channel: Channel,
+    params: { carrierFrequency?: number; pulseRate?: number; wet?: number }
+  ) => {
+    updateChannelConfig(channel, {
+      isochronic: {
+        ...state[`${channel}Channel`].isochronic,
+        ...params
+      }
+    });
+  };
+
   const handleNoiseToggle = (channel: Channel, enabled: boolean) => {
     updateChannelConfig(channel, {
       noise: { ...state[`${channel}Channel`].noise, enabled }
@@ -137,6 +157,8 @@ const useChannelHandlers = (
     onDelayChange: handleDelayChange,
     onFrequencyToggle: handleFrequencyToggle,
     onFrequencyChange: handleFrequencyChange,
+    onIsochronicToggle: handleIsochronicToggle,
+    onIsochronicChange: handleIsochronicChange,
     onNoiseToggle: handleNoiseToggle,
     onNoiseChange: handleNoiseChange,
   };
@@ -449,6 +471,10 @@ export const AudioPlayer = ({ audioUrl, className = "", actualTier }: AudioPlaye
           onRightFrequencyToggle={(enabled) => channelHandlers.onFrequencyToggle("right", enabled)}
           onLeftFrequencyChange={(params) => channelHandlers.onFrequencyChange("left", params)}
           onRightFrequencyChange={(params) => channelHandlers.onFrequencyChange("right", params)}
+          onLeftIsochronicToggle={(enabled) => channelHandlers.onIsochronicToggle("left", enabled)}
+          onRightIsochronicToggle={(enabled) => channelHandlers.onIsochronicToggle("right", enabled)}
+          onLeftIsochronicChange={(params) => channelHandlers.onIsochronicChange("left", params)}
+          onRightIsochronicChange={(params) => channelHandlers.onIsochronicChange("right", params)}
           onLeftNoiseToggle={(enabled) => channelHandlers.onNoiseToggle("left", enabled)}
           onRightNoiseToggle={(enabled) => channelHandlers.onNoiseToggle("right", enabled)}
           onLeftNoiseChange={(params) => channelHandlers.onNoiseChange("left", params)}
