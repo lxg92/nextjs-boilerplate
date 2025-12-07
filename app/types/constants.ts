@@ -35,7 +35,7 @@ export const DEFAULT_ISOCHRONIC_CONFIG: IsochronicConfig = {
   enabled: false,
   carrierFrequency: 136.1,
   pulseRate: 8,
-  wet: 0.3,
+  wet: 0.4,
 };
 
 export const DEFAULT_CHANNEL_CONFIG: ChannelConfig = {
