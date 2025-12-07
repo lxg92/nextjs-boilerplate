@@ -830,6 +830,10 @@ export default function AudioControls({
         onRightFrequencyToggle={onRightFrequencyToggle}
         onLeftFrequencyChange={onLeftFrequencyChange}
         onRightFrequencyChange={onRightFrequencyChange}
+        onLeftIsochronicToggle={onLeftIsochronicToggle}
+        onRightIsochronicToggle={onRightIsochronicToggle}
+        onLeftIsochronicChange={onLeftIsochronicChange}
+        onRightIsochronicChange={onRightIsochronicChange}
         onLeftNoiseToggle={onLeftNoiseToggle}
         onRightNoiseToggle={onRightNoiseToggle}
         onLeftNoiseChange={onLeftNoiseChange}
